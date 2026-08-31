@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Guias de Viagem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #17181b;
+    --bg-elev: #201f22;
+    --bg-elev-2: #29282c;
+    --ink: #f2efe9;
+    --ink-dim: #aeaba3;
+    --ink-faint: #7c7a76;
+    --line: rgba(242,239,233,.10);
+    --line-strong: rgba(242,239,233,.18);
+    --select: #ffd166;
+    --select-ink: #201a06;
+    --c-sp: #78a9cc;
+    --c-foz: #6fbb8d;
+    --radius: 18px;
+  }
+  *{ box-sizing:border-box; }
+  html{ -webkit-tap-highlight-color: transparent; }
+  body{
+    margin:0; min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,209,102,.06), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center;
+  }
+  .wrap{ max-width:760px; margin:0 auto; padding:48px 20px; width:100%; }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px; letter-spacing:.16em; color:var(--select);
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:10px; margin-bottom:14px;
+  }
+  .eyebrow::before{ content:""; width:22px; height:1px; background:var(--select); display:inline-block; }
+
+  h1{
+    font-family:'Space Grotesk','Inter',sans-serif;
+    font-size: clamp(28px, 5vw, 42px);
+    line-height:1.12; font-weight:700; margin:0 0 12px;
+  }
+  .lead{
+    font-size:14.5px; line-height:1.55; color:var(--ink-dim);
+    max-width:52ch; margin:0 0 34px;
+  }
+
+  .cards{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:620px){ .cards{ grid-template-columns:1fr; } }
+
+  .card{
+    position:relative;
+    display:block; text-decoration:none; color:var(--ink);
+    background:var(--bg-elev); border:1px solid var(--line);
+    border-radius: var(--radius);
+    padding:22px 20px;
+    overflow:hidden;
+    transition: transform .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .card:hover{ background:var(--bg-elev-2); border-color:var(--line-strong); transform:translateY(-2px); }
+  .card::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background: var(--accent, var(--select));
+  }
+  .card .tag{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.08em;
+    text-transform:uppercase; color: var(--accent, var(--select)); margin-bottom:12px;
+    display:block;
+  }
+  .card h2{
+    font-family:'Space Grotesk','Inter',sans-serif;
+    font-size:20px; font-weight:600; margin:0 0 8px; line-height:1.25;
+  }
+  .card p{
+    font-size:13px; line-height:1.5; color:var(--ink-dim); margin:0 0 16px;
+  }
+  .card .go{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink);
+  }
+  .card .go svg{ width:14px; height:14px; transition: transform .15s ease; }
+  .card:hover .go svg{ transform: translateX(3px); }
+
+  footer{
+    margin-top:36px; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    color:var(--ink-faint); text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Guias de Viagem</div>
+  <h1>Pra onde vamos?</h1>
+  <p class="lead">Dois roteiros interativos — mapa, lista de pontos por categoria e rota direta pelo Google Maps.</p>
+
+  <div class="cards">
+    <a class="card" href="roteiro_sao_paulo_v2.html" style="--accent:var(--c-sp)">
+      <span class="tag">73 pontos</span>
+      <h2>São Paulo</h2>
+      <p>Cultura, parques, arquitetura, compras, hospedagem, restaurantes e endereços pessoais.</p>
+      <span class="go">Abrir roteiro
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="roteiro_foz_iguacu.html" style="--accent:var(--c-foz)">
+      <span class="tag">34 pontos</span>
+      <h2>Foz do Iguaçu</h2>
+      <p>Cataratas, Itaipu, compras na fronteira, hospedagem e restaurantes.</p>
+      <span class="go">Abrir roteiro
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+  </div>
+
+  <footer>jonasknopman.github.io/analises</footer>
+</div>
+</body>
+</html>
