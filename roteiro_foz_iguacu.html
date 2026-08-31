@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Foz do Iguaçu — guia de viagem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg: #17181b;
+    --bg-elev: #201f22;
+    --bg-elev-2: #29282c;
+    --ink: #f2efe9;
+    --ink-dim: #aeaba3;
+    --ink-faint: #7c7a76;
+    --line: rgba(242,239,233,.10);
+    --line-strong: rgba(242,239,233,.18);
+    --select: #ffd166;
+    --select-ink: #201a06;
+
+    --c-atracoes: #ef6f6f;
+    --c-compras: #ac93d1;
+    --c-hospedagem: #93a9b6;
+    --c-restaurantes: #e0a83a;
+
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-tap-highlight-color: transparent; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,209,102,.05), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: 40px;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 18px; }
+
+  h1,h2,h3, .disp{ font-family:'Space Grotesk', 'Inter', sans-serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* ---------- header ---------- */
+  header{ padding:34px 0 18px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.16em;
+    color: var(--select);
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px; height:1px; background: var(--select);
+    display:inline-block;
+  }
+  header h1{
+    font-size: clamp(26px, 4.6vw, 38px);
+    line-height:1.12;
+    font-weight:700;
+    margin:0 0 12px;
+    max-width: 17ch;
+  }
+  header p{
+    font-size:14.5px;
+    line-height:1.55;
+    color:var(--ink-dim);
+    max-width:52ch;
+    margin:0;
+  }
+
+  /* ---------- map ---------- */
+  .map-wrap{ position:relative; margin-top:22px; }
+  #map{
+    height: 340px;
+    border-radius: var(--radius);
+    border:1px solid var(--line-strong);
+    background:var(--bg-elev);
+  }
+  @media (max-width:640px){ #map{ height:280px; } }
+
+  .map-controls{
+    position:absolute; top:12px; right:12px; z-index:1200;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .map-btn{
+    width:38px; height:38px; border-radius:50%;
+    background:var(--bg-elev-2); border:1px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink); cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.4);
+    transition: all .15s ease;
+  }
+  .map-btn svg{ width:18px; height:18px; }
+  .map-btn:hover{ background:var(--bg-elev); border-color:var(--select); color:var(--select); }
+  .map-btn.busy{ opacity:.45; pointer-events:none; }
+
+  .leaflet-popup-content-wrapper{
+    background:var(--bg-elev-2); color:var(--ink);
+    border-radius:12px; border:1px solid var(--line-strong);
+  }
+  .leaflet-popup-tip{ background:var(--bg-elev-2); }
+  .leaflet-popup-content{ margin:12px 14px; font-family:'Inter',sans-serif; }
+  .pop-cat{ display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; opacity:.75; margin-bottom:4px;}
+  .pop-cat img{ width:12px; height:12px; object-fit:contain; }
+  .pop-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px; margin-bottom:6px; }
+  .pop-desc{ font-size:12.5px; line-height:1.45; color:var(--ink-dim); margin-bottom:10px; }
+  .pop-route{
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em;
+    border:1px solid var(--line-strong); background:transparent; color:var(--ink);
+    padding:8px 12px; border-radius:8px; text-decoration:none;
+    transition: all .15s ease;
+  }
+  .pop-route:hover{ background:var(--select); color:var(--select-ink); border-color:var(--select); }
+  .pop-route svg{ width:13px; height:13px; }
+  .leaflet-container a.leaflet-popup-close-button{ color:var(--ink-dim); }
+
+  /* ---------- controls (sticky) ---------- */
+  .controls{
+    position:sticky; top:0; z-index:20;
+    background: linear-gradient(var(--bg) 78%, transparent);
+    padding:16px 0 10px;
+    margin-top: 4px;
+  }
+  .search{
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg-elev); border:1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding:10px 14px; margin-bottom:12px;
+  }
+  .search svg{ flex:none; opacity:.55; }
+  .search input{
+    background:none; border:none; outline:none; color:var(--ink);
+    font-family:'Inter',sans-serif; font-size:14.5px; width:100%;
+  }
+  .search input::placeholder{ color:var(--ink-faint); }
+
+  .chips{
+    display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;
+    scrollbar-width:none;
+  }
+  .chips::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:none;
+    display:flex; align-items:center; gap:7px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px; letter-spacing:.02em;
+    color:var(--ink-dim);
+    background:var(--bg-elev);
+    border:1px solid var(--line-strong);
+    padding:8px 13px 8px 10px;
+    border-radius:100px;
+    cursor:pointer;
+    user-select:none;
+    transition: border-color .15s, color .15s, background .15s;
+    white-space:nowrap;
+  }
+  .chip .dot{ width:8px; height:8px; border-radius:50%; flex:none; background:var(--select); }
+  .chip .chip-icon{ width:14px; height:14px; object-fit:contain; flex:none; }
+  .chip .count{ opacity:.6; }
+  .chip.active{ color:var(--ink); background:var(--bg-elev-2); border-color:var(--line-strong); }
+  .chip:hover{ border-color: var(--ink-faint); }
+
+  /* ---------- grid / cards ---------- */
+  #grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+    gap:12px;
+    margin: 14px 0 10px;
+  }
+  .card{
+    position:relative;
+    background:var(--bg-elev);
+    border:1px solid var(--line);
+    border-left:3px solid var(--cat-color, var(--line));
+    border-radius: var(--radius-sm);
+    padding:14px 14px 15px;
+    cursor:pointer;
+    transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    animation: rise .35s ease both;
+  }
+  .card:hover{ background:var(--bg-elev-2); }
+  .card:active{ transform: scale(.985); }
+  .card-top{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:10px; margin-bottom:8px;
+  }
+  .cat-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--cat-color);
+  }
+  .cat-tag img{ width:15px; height:15px; object-fit:contain; }
+  .route-btn{
+    flex:none;
+    width:26px; height:26px; border-radius:50%;
+    border:1.5px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink-dim); text-decoration:none;
+    transition: all .15s ease;
+  }
+  .route-btn svg{ width:13px; height:13px; }
+  .route-btn:hover{ background:var(--select); border-color:var(--select); color:var(--select-ink); }
+  .card h3{
+    font-size:16px; font-weight:600; line-height:1.28;
+    margin:0 0 6px;
+  }
+  .card p{
+    font-size:13px; line-height:1.5; color:var(--ink-dim);
+    margin:0;
+  }
+  .empty{
+    grid-column:1/-1; text-align:center; padding:50px 20px; color:var(--ink-faint);
+    font-size:13.5px;
+  }
+
+  @keyframes rise{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){ .card{ animation:none; } }
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px);
+    background:var(--ink); color:var(--bg); font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    padding:10px 16px; border-radius:100px; z-index:50; opacity:0; pointer-events:none;
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Guia de Viagem · Foz do Iguaçu</div>
+    <h1>Foz do Iguaçu, na palma da mão</h1>
+    <p>34 pontos entre atrações, compras, hospedagem e restaurantes. Toque num cartão para ver no mapa, ou use o ícone de rota para abrir o caminho direto no Google Maps.</p>
+  </header>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-controls">
+      <button class="map-btn" id="locateBtn" title="Minha localização" aria-label="Minha localização">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </button>
+      <button class="map-btn" id="resetViewBtn" title="Ver todos os pontos" aria-label="Ver todos os pontos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v6h6M20 10V4h-6M4 10V4h6M20 14v6h-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="Buscar por nome…" />
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="grid"></div>
+</div>
+
+<div class="toast" id="toast">Não foi possível obter sua localização</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===================== ícones (seus símbolos do KMZ, em base64) ===================== */
+const ICON_ATRACOES = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAMAAACdt4HsAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAvVBMVEUAAAAAAADz8/P7+/v///8AAAD///8AAACLi4v///8AAAD///////////97e3v///+fn5/n5+f///8vLy/X19f39/f////////////////////////T09P///9OTk7////Hx8f7+/uvr6+7u7t7e3vHx8ff39//////////+/v/p6f/UlL/X1//19f/Z2f/V1f/r6//v7//c3P/l5f/9/f/j4//8/P/7+//5+f/y8v/g4P/6+v/39//t7f/4+M/Wt3OAAAAKHRSTlMAFef7707qKX4cPHMkj3cUi9MuWrvzTkrTv6+zt1tjf6drk58vTsdSb0CyOQAAAqlJREFUeNrt/cd64jAURgHIjU6H1Jn0JL8LuJvO+z/WyKkWUYN8szy7xLrHukUySyLGqLdaDqXVqhvkaIy6w3Ckwyhf3bh7MaeWNTVf7hrlRo5Q0Lf3JhYqWJMe3YVmuEHDhzRoG+VJEIZBkkdb+ueQKgy9+PEEKLy5X2HuFcBkrGMwnJ4J1wv8AwLPhdlTGwxnYGE29znMZ7AGSoMzAHahzyXcAQNHHt9qWPB8IR6sRksWX7+ZIvIlRJjeyLrpDLHypawwlCRRf8AmkAuCDR7EWxjbyH0FOeyxKN54xMxXMsOjqJX1GtZqwRo1UQ4NLNm182ibZdvoYKyWaAgEfw5GgA7vG+7Bv/GHH2+YSKoLo+/TzMxGApNfhCdk1XXr6n3A1CbDE1fwzPZgXxXsq09meOYK7hEzG2WoJhfjnitoM6mmrCCtPIrQ5gpumSZ4rIB9dPt/dvDrGpyxR1nchRXOuIImFtVl4jlYoMkVkBqYqRdN4hw1fjy5PrgNBGchx7VA0Gaq6ItOYyxoAiEdFIILvUpYoCMQkAu9C+VCFE9nMVYLYsEcljRdN1DFB67bFApoHzyVwBP2oOQcG0UZww3OJQJaxlQuSCUlLPnLTv1P9vgrFRBT/m3KYcrj6RaWkiqES9UGFFVQVaDkDAvhLAQLwU3AcImdSLDDpTqejFw34ccnrjvSEJCu6CM/Q1cnnvRr/DqmqPW1BLSVBeeH4rxQt/CTK95PrRWudONJ0/6ZRAq7qS2gSWQHScwz/QRKrg47MTsigRLaCeZq8bQ78Mk5quOUuPJrhEcXy68zESw1R4jh4ruXK41D+JOO/VkGD3bnBAF5hfv2nVm7eCUn0cWCTsN8cUoB3rnELAxnWpcAn76JOIbZP1lARjZgj8gvOIPOLSij3VYs+AfsXzAuFASbVAAAAABJRU5ErkJggg==";
+const ICON_COMPRAS = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAvVBMVEUAAAAAAAAAAAAAAAD///////8AAADv7+////9bW1uTk5Nzc3P///////8AAAB7e3v////////39/fT09P////////Ly8v7+/vn5+f7+/sAAADPz8/////39/fz8/MYGBj///////////+vr693d3fLy8uHh4f/////g4P/x8f/4+P/a2v/7+//W1v/+/v/UlL/n5//r6//8/P/i4v/t7f/9/f/d3f/c3P/V1f/X1//Y2P/19f/l5f/u7v/p6eOa7IcAAAAJ3RSTlMATj0Mksos3vdngnImTBN3Z+PztjC7r/fP8yGz3+vnUjwINJZngkgsCVOlAAAC1ElEQVR42u39x5brIAyGARg7cU1PT5s+cndJn/b+j3XBFeMSL+/mX/kAHxKyEFpy/4l6o858N5HlyW7eGfXaUrPOGAoad2YtsH4XL7UNX7fut9vd0n3DxgPd/gPsFWPh6eIVdDmFGH1twF462JjveCU5Pjbbeanjel1wgwosQgMXujVhel6DefVqdTVh/VzF9WUwHK9BjgFyRYyeZfj1HugX5JLN3voxR8g1c86XLhheCxnQLca2A6bTBnRM6NDcK7hsPL8C83w2gy9m+OoCnQldCJgFP+c4T88/zEQA3Zzrg804+kOY729CM6RjQ58y6BdnLReA5JATALhWcc7PTc4gdFh/Ut/zr8xkCLMspKfinGeCm2zluGAyk6cssGOg75GlH48h2MdENoTHo067e4FxzPXApoZ/oVJ0WtkQp8+IThodaqTnawwYJUekYvoXrbp+XVMg/fzL1/jJIef0bjF4If5EssmZGFCHeQTuwGJB/AeOMXiM/kgRtGAXgRO4s2CIR3A8cWw97x6y4B0mEejCjQXBIEMW8eRmAAvewI1AuQKE7+RafH1DBSjXuYp1PumWpZ/OUAZTVw/l4FSoEJxDBK7Kv6MZ1GEVgdNyAjSDPkwj8INOuTagAR8R+EkneRvQhs8I3Oypa9UCvMB+E4HCgrrILcATLIT4Qr5TpeMxiEvHe8xxIlWsHoO4WIkJKKh5efTrwHRrXB7VxFOO46WslJHCWKWsSAYg8SnHDbT8CdDNKs5Mkws/AdogAzl+2/7R2eYGscknqe0zJz1RBnFglbYPqyJyBfHDZZunfDnkixwnIHX5uHlYqkhgQG6Aho/blSHCByyTitTcIElKFUfIp21TS7Z9qubwOXmkSXVNoKQhXuDqJCKkVredKkIi16ABj5C22Bfzbb/QEOIHXLMIipS36epAWuvDavqmoBYYkYAdLkoUuJYSNiJPLCOeFzfV1D8v7XI2sfBYnAAAAABJRU5ErkJggg==";
+const ICON_HOSPEDAGEM = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAyVBMVEUAAAAAAAAAAAAAAAAAAADPz8////90dHT////r6+tcXFyTk5P////39/f///////////////98fHz///8AAADv7+/39/fn5+f///8AAADLy8vz8/P7+/v///////////////////////+vr6/Ly8uHh4f///8AAAAMDAxwcHD7+/vn5+enp6evr68kJCTb29tISEgwMDCXl5eAgIA4ODgUFBTr6+uTk5MEBARAQECLi4sICAjz8/ODg4PPz89UVFTj4+PDw8McHBxmPG3AAAAAJnRSTlMATjwMLLP3cJLXaIDj8yRMymh3vRPe68/vIK/n947PPDAINJaASDGDAYwAAAKPSURBVHja7f3FkuswEAVQSOZwOJzhltnh4OD/f9RTDLGcMWh2b3OXKZ203RYt0X+SekvrVGumWat2tFadVz3OqpBIdfbIwRpNOtSyjYW7PZ+37sKwLfpDs1HAninb7Tckkc1+R+lzDnvSaDFDJ7+iG7Ss9pTl6nMwTynMpycT5hltehiCtySZWXowfEhzDQUcneREd0BJ6dGDAqsDyc1hBcqvmvUhrEhhVjC8e8+nOTiHYnhwYJ7srQaeTjiie6Cx7hnMJeHK0gR2JjThRDhzgmbsGmDpvFC3oMEUNIJf1+tjoTTiko+wCwsCrAuhvoNolc1gT/gh2cMshFXYJODnyr4ukeMljuXEXd9ANXB1sAgDD/Z11Xs/5JjYBszPm7QgmD4tsFloBAOdOwgXNxplQ8uHWtTTAH6EA7d3MP7URjh7OrBg4S4ct7yHXjRqAZ2wNy5XxUs0yg27U4MtzzsCRKO2UPOhCWcWZnSVgWcwfagkYfwds6GS9qi3FD7qhG3O1/ctH1nQhYkPB+znyEs0agEDH8rsBOCBBsg+fGWnHA+04dWHb+wkf9cz8h5DC958OOrfLavUrG9wA/2RD8Uxz0KO4R7GYrAgVZ6t4wbp1qEGDkkljs3quA7/04CSFEKx8rftsRI+KUJC6S8bckmIHOqqfzkC1O4NIkHmP3TkuCAtiXu8x1wPMwVpY8u8B2tZQokI7SnPUT5tC0mHRFyZFl8ephUs3kH6mu3i60o7+YKRLPfyL0i9cpq7SiznXclknO7oewpYLWVdAksqFkSUFQnjCqW/r52lCsYSyklXwFgd95NbRn+sYix0UX6uFJdf5MGkpii1yUB+KWMOdo1IHzgZSUScEUeSEBhBGqWrf1WOTKxokTOoAAAAAElFTkSuQmCC";
+const ICON_RESTAURANTES = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAwFBMVEUAAAAAAAAAAAAAAAD///8AAAD////r6+tbW1uTk5Nzc3P///////8AAAD///97e3v////////39/fT09P////////v7+/Ly8v7+/v////n5+f7+/sAAADPz8/////39/fz8/MYGBj///////////+vr693d3fLy8uHh4f/////n5//UlL/x8f/+/v/W1v/7+//8/P/d3f/V1f/5+f/X1//a2v/g4P/i4v/u7v/r6//t7f/4+P/19f/c3P/k5P/h4dYBXZrAAAAKXRSTlMATj0Mkiz32meCciZME8d3Z+PztjC73q/3z8/zIbPf6+dSPAg0lmeCSEQ3qZwAAAL/SURBVHja7f3FguMwDIYBxMFyuVwYHoXD5Xn/t1qH7caF417+U6P6iyCy7CP3n6jZE8ebgSwPNmOx13yVGol9oNQXRy9grQ5eaulqGPiu6wehqlvY0Gk9wT4xZh8djZJztDH6+QD7ELEz1dQqMlXsVvy4xzXnYBwYWIIeDJjfKdP7EryLdlcXD5bvLK4lg25qD2TqIDNq9C7DXnuiPcgVn83lcy4mlzd5fsxB116QDnO6tiJ45iug6YFIcp9gPKino6pR/tqLAWQndOCQ/bF3brHIi/vV/sseD9ApuRZY2Rv/wKZJd591eh6SaUGLcKhm63T8bipovdgjefHU0uUI7DwFG2hSLTeXlZlMG0ZFSY/5QgMo0rRL0MiNx6KwfSjyOqUvD7LHK7GdvXyNA/2UaxZRxDWjyD0Blo1lQdo+PaJpfJsizwRYZq5DL0tRLWxaaJCkznKIK5YmOYZQu0OWRT0RHRnCOAE3EGgM8owDP+Xc2SdWBLBJwAGQVtw9Cen5JWepLrnAh0ECGkCZcXdi0gsSzggd9erc/O+CkYDyLYhJnKGJS2r8aQy5IDNDjcmUA8tngXmoO7o4qcz0E55YZAC7BFxQn6PkDDxKmWQIiwQckg1AcFHyZRikCsME/KnMKTeOM9K0O6QOPwn4SzR5yV2Tn0zSgt8EXG2BGheuXnBpN5zpAejAdpWAwrTcyLccizzCVEg35Hc5OjKOrFZ0Q+Kp8J1ynKSUKytchVRBkTJQqBfjUYsqXEoWNjwe61mkHMcrxUDGw6PyVfHoKbfxARQ+57h2gzgCKqOcsuEjoNEuQI5fv37orEuH2OXb5NVjbvJGOMSFrb16sNYkjhLfnb1ylM+6PM1xAqrPnl8eZnUk3IBcG3WfX1e6CCdYJWuTxxekSY3FxeTb+tGVbP3G5nCePGoo9y6BSgPxAndPEkJ1BRjXTqWOkMQ9UJtHqDHdAqXttIEQ3+YeK0ZR7Wu42MVX691i+FVDL2CxBBwwLUngXpSwkvjYM+J5acWm/gF/1Gon+6UQowAAAABJRU5ErkJggg==";
+
+/* ===================== dados ===================== */
+const CATS = {
+  atracoes:      { label:"Atrações",     color:"var(--c-atracoes)",      icon:ICON_ATRACOES,
+    markerSize:[30,34], markerAnchor:[15,34], popupAnchor:[0,-30] },
+  compras:       { label:"Compras",      color:"var(--c-compras)",       icon:ICON_COMPRAS,
+    markerSize:[28,28], markerAnchor:[14,14], popupAnchor:[0,-14] },
+  hospedagem:    { label:"Hotel",        color:"var(--c-hospedagem)",    icon:ICON_HOSPEDAGEM,
+    markerSize:[28,28], markerAnchor:[14,14], popupAnchor:[0,-14] },
+  restaurantes:  { label:"Restaurantes", color:"var(--c-restaurantes)",  icon:ICON_RESTAURANTES,
+    markerSize:[28,28], markerAnchor:[14,14], popupAnchor:[0,-14] }
+};
+
+const DATA = [
+  {id:1, cat:"atracoes", name:"AquaFoz", lat:-25.6165001, lon:-54.4809839, desc:"Aquário de última geração, inaugurado em 2025 em frente ao Parque Nacional do Iguaçu, com mais de 3 milhões de litros d’água e centenas de espécies dos rios Paraná e Iguaçu até ambientes marinhos."},
+  {id:2, cat:"atracoes", name:"Cataratas do Iguaçu", lat:-25.6136335, lon:-54.4801236, desc:"Uma das maiores quedas d’água do mundo e Patrimônio Natural da Humanidade — o lado brasileiro oferece a vista panorâmica de conjunto, com passarelas próximas à Garganta do Diabo."},
+  {id:3, cat:"atracoes", name:"Ciudad del Este", lat:-25.4987076, lon:-54.6636526, desc:"Cidade paraguaia do outro lado da Ponte da Amizade, conhecida pelo comércio de eletrônicos, perfumes e importados a preços mais baixos."},
+  {id:4, cat:"atracoes", name:"Dreams Park Show", lat:-25.5913206, lon:-54.5172479, desc:"Complexo de entretenimento na Avenida das Cataratas com museu de cera, bar de gelo, vale dos dinossauros, réplicas das maravilhas do mundo e um museu de motos temático."},
+  {id:5, cat:"atracoes", name:"Ecomuseu de Itaipu", lat:-25.4549938, lon:-54.5847086, desc:"Museu da Itaipu Binacional sobre a história da usina e da região, com exposições sobre engenharia, meio ambiente e a formação do lago — parte do Complexo Turístico Itaipu."},
+  {id:6, cat:"atracoes", name:"Garganta do Diabo", lat:-25.695259, lon:-54.4366662, desc:"O ponto mais impressionante das Cataratas, onde 14 quedas se juntam num só abismo — a melhor vista é pelo lado argentino, por uma passarela sobre o rio."},
+  {id:7, cat:"atracoes", name:"Iguazú National Park", lat:-25.6829476, lon:-54.4546339, desc:"Parque Nacional Iguazú, do lado argentino, com trilhas (Superior e Inferior) que levam a mirantes bem próximos às quedas — complementa a vista de conjunto do lado brasileiro."},
+  {id:8, cat:"atracoes", name:"Itaipu Binacional - Barreira de Controle", lat:-25.4469447, lon:-54.5851341, desc:"Barreira de controle da área de segurança da Usina de Itaipu — ponto de passagem dos passeios guiados até o Refúgio Biológico Bela Vista."},
+  {id:9, cat:"atracoes", name:"Itaipu - Refúgio Biológico", lat:-25.4469558, lon:-54.5840659, desc:"Refúgio Biológico Bela Vista, área de conservação da Itaipu com trilhas na Mata Atlântica e um zoológico com espécies resgatadas da região, como onças e araras."},
+  {id:10, cat:"atracoes", name:"Macuco Safari", lat:-25.6512818, lon:-54.4380719, desc:"Passeio de barco que se aproxima das quedas d’água pelo rio Iguaçu, precedido por um trajeto de trator elétrico numa trilha na mata — prepare-se para se molhar."},
+  {id:11, cat:"atracoes", name:"Mesquita de Foz do Iguaçu Central", lat:-25.5206032, lon:-54.5787021, desc:"Mesquita Omar Ibn Al-Khattab, inaugurada em 1983 pela comunidade árabe local — a maior mesquita do Brasil, com cúpula e minaretes marcantes, aberta a visitas guiadas gratuitas."},
+  {id:12, cat:"atracoes", name:"Parque das Aves", lat:-25.6139228, lon:-54.4825657, desc:"Um dos maiores parques de aves da América Latina, ao lado da entrada do parque brasileiro das Cataratas, com viveiros imersivos de tucanos, araras e outras espécies."},
+  {id:13, cat:"atracoes", name:"Puerto Iguazú", lat:-25.5965209, lon:-54.5750309, desc:"Cidade argentina da tríplice fronteira, base para visitar o lado argentino das Cataratas — tem também o Marco das Três Fronteiras e boa gastronomia de parrilla."},
+  {id:14, cat:"atracoes", name:"Templo Budista Chen Tien", lat:-25.474491, lon:-54.5995158, desc:"O maior templo budista da América Latina, com arquitetura chinesa tradicional, jardins e um grande Buda dourado — aberto a visitantes de qualquer religião."},
+  {id:15, cat:"atracoes", name:"Centro de Visitantes (Parque Nacional)", lat:-25.6138281, lon:-54.4790564, desc:"Centro de visitantes do Parque Nacional do Iguaçu, do lado brasileiro — ponto de partida do ônibus interno que leva às passarelas das Cataratas."},
+  {id:16, cat:"atracoes", name:"Wonder Park Foz", lat:-25.6091202, lon:-54.4890114, desc:"Complexo temático perto das Cataratas, com o Movie Cars (carros de filmes famosos), Big Land (brinquedos gigantes), show noturno de águas e a trilha iluminada Lumina Park."},
+  {id:17, cat:"compras", name:"Feirinha Porto Iguazú", lat:-25.5939778, lon:-54.5739102, desc:"Feira de artesanato e lembrancinhas no centro de Puerto Iguazú, boa opção para presentes e souvenirs argentinos."},
+  {id:18, cat:"compras", name:"Loja Monalisa", lat:-25.509863, lon:-54.610395, desc:"Loja de departamentos em Ciudad del Este voltada a eletrônicos, perfumes e importados — parada clássica do turismo de compras na fronteira."},
+  {id:19, cat:"compras", name:"Shopping Paris", lat:-25.5130562, lon:-54.6059716, desc:"Shopping de importados em Ciudad del Este, com lojas de eletrônicos, perfumaria e artigos variados a preços de fronteira."},
+  {id:20, cat:"compras", name:"Shopping China Importados", lat:-25.5149524, lon:-54.6062104, desc:"Galeria de lojas de importados em Ciudad del Este, com foco em eletrônicos e produtos chineses a preços mais baixos."},
+  {id:21, cat:"hospedagem", name:"JL Hotel by Bourbon", lat:-25.5337114, lon:-54.5746858, desc:"Hotel da rede Bourbon em Foz do Iguaçu — provavelmente a base de hospedagem da viagem, não exatamente um passeio."},
+  {id:22, cat:"restaurantes", name:"Restaurante La Rueda", lat:-25.6013331, lon:-54.5719654, desc:"Um dos restaurantes mais tradicionais de Puerto Iguazú, com parrilla argentina e peixes de rio como o dourado — decoração rústica e clima descontraído."},
+  {id:23, cat:"restaurantes", name:"Bendito - Bar e Restaurante", lat:-25.5441434, lon:-54.5819816, desc:"Bar e restaurante casual em Foz, bom para petiscos, drinks e um jantar sem formalidade."},
+  {id:24, cat:"restaurantes", name:"Le Mir Comida Árabe", lat:-25.5411613, lon:-54.58069, desc:"Comida árabe tradicional, com esfihas, quibes e pratos para compartilhar — reflexo da forte comunidade árabe da cidade."},
+  {id:25, cat:"restaurantes", name:"Baru Gastronomia", lat:-25.5165025, lon:-54.5751844, desc:"Restaurante de cozinha contemporânea em Foz, com proposta autoral e cardápio que muda com frequência."},
+  {id:26, cat:"restaurantes", name:"Churrascaria Búfalo Branco", lat:-25.5359464, lon:-54.5883088, desc:"Churrascaria tradicional desde 1989, no centro da cidade, com rodízio de carnes nobres e um buffet variado de saladas e pratos quentes."},
+  {id:27, cat:"restaurantes", name:"Santo Cupim - Botequim e Restaurante", lat:-25.5409227, lon:-54.5805993, desc:"Botequim descontraído com petiscos e pratos da culinária brasileira, boa pedida para uma refeição informal."},
+  {id:28, cat:"restaurantes", name:"Quinta da Oliva - Pizzas, Carnes e Massas", lat:-25.5495871, lon:-54.5787149, desc:"Casa de pizzas, carnes e massas, em ambiente familiar — opção versátil para quem quer variar o cardápio na mesma mesa."},
+  {id:29, cat:"restaurantes", name:"Tia Santa", lat:-25.5412276, lon:-54.5812262, desc:"Restaurante de comida caseira brasileira, com clima acolhedor de cozinha de família."},
+  {id:30, cat:"restaurantes", name:"BONA - Gastronomia Italiana", lat:-25.5476961, lon:-54.5854276, desc:"Cozinha italiana clássica, com massas e molhos tradicionais num ambiente aconchegante."},
+  {id:31, cat:"restaurantes", name:"La Mafia Trattoria", lat:-25.5404684, lon:-54.5768821, desc:"Trattoria italiana com massas artesanais e pratos clássicos, boa opção para um jantar mais tranquilo."},
+  {id:32, cat:"restaurantes", name:"Pátio Pomare", lat:-25.5505536, lon:-54.5736223, desc:"Restaurante num espaço amplo e arejado, com cardápio variado — bom para grupos e famílias."},
+  {id:33, cat:"restaurantes", name:"La Cabrera Iguazú", lat:-25.5992025, lon:-54.5709308, desc:"Unidade da famosa parrilla portenha La Cabrera, de Buenos Aires, com cortes de carne generosos e as clássicas guarnições em potinhos."},
+  {id:34, cat:"restaurantes", name:"Albayan Doceria Árabe", lat:-25.5211081, lon:-54.5794207, desc:"Doceria árabe com baklava, tâmaras recheadas e outros doces tradicionais — boa parada para um café da tarde."}
+];
+
+/* ===================== estado ===================== */
+let activeCat = "todos";
+let searchTerm = "";
+const markers = {};
+
+/* ===================== helpers ===================== */
+function buildChips(){
+  const wrap = document.getElementById('chips');
+  const counts = {};
+  DATA.forEach(d => counts[d.cat] = (counts[d.cat]||0)+1);
+
+  const all = document.createElement('div');
+  all.className = 'chip active';
+  all.dataset.cat = 'todos';
+  all.innerHTML = `<span class="dot"></span>Todos <span class="count">${DATA.length}</span>`;
+  wrap.appendChild(all);
+
+  Object.keys(CATS).forEach(key=>{
+    const c = CATS[key];
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.dataset.cat = key;
+    el.innerHTML = `<img class="chip-icon" src="${c.icon}" alt=""/>${c.label} <span class="count">${counts[key]||0}</span>`;
+    wrap.appendChild(el);
+  });
+
+  wrap.addEventListener('click', e=>{
+    const chip = e.target.closest('.chip');
+    if(!chip) return;
+    activeCat = chip.dataset.cat;
+    [...wrap.children].forEach(c=>c.classList.toggle('active', c===chip));
+    renderCards();
+  });
+}
+
+function matches(item){
+  const catOk = activeCat === 'todos' || item.cat === activeCat;
+  const term = searchTerm.trim().toLowerCase();
+  const searchOk = !term || item.name.toLowerCase().includes(term);
+  return catOk && searchOk;
+}
+
+function renderCards(){
+  const grid = document.getElementById('grid');
+  const list = DATA.filter(matches);
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty">Nenhum ponto encontrado com esse filtro.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(item=>{
+    const cat = CATS[item.cat];
+    return `
+      <div class="card" data-id="${item.id}" style="--cat-color:${cat.color}">
+        <div class="card-top">
+          <span class="cat-tag"><img src="${cat.icon}" alt=""/>${cat.label}</span>
+          <a class="route-btn" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}" target="_blank" rel="noopener" aria-label="Rota no Google Maps" title="Rota no Google Maps">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          </a>
+        </div>
+        <h3>${item.name}</h3>
+        <p>${item.desc}</p>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('grid').addEventListener('click', e=>{
+  if(e.target.closest('.route-btn')) return;
+  const card = e.target.closest('.card');
+  if(!card) return;
+  const id = Number(card.dataset.id);
+  const marker = markers[id];
+  if(marker){
+    map.setView(marker.getLatLng(), 17);
+    marker.openPopup();
+    document.getElementById('map').scrollIntoView({behavior:'smooth', block:'center'});
+  }
+});
+
+document.getElementById('searchInput').addEventListener('input', e=>{
+  searchTerm = e.target.value;
+  renderCards();
+});
+
+/* ===================== mapa ===================== */
+const map = L.map('map', { scrollWheelZoom:false });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap',
+  maxZoom: 19
+}).addTo(map);
+
+function markerIcon(cat){
+  const c = CATS[cat];
+  return L.icon({
+    iconUrl: c.icon,
+    iconSize: c.markerSize,
+    iconAnchor: c.markerAnchor,
+    popupAnchor: c.popupAnchor
+  });
+}
+
+const latlngs = [];
+DATA.forEach(item=>{
+  const m = L.marker([item.lat, item.lon], { icon: markerIcon(item.cat) }).addTo(map);
+  const popupHtml = `
+    <div class="pop-cat"><img src="${CATS[item.cat].icon}" alt=""/>${CATS[item.cat].label}</div>
+    <div class="pop-name">${item.name}</div>
+    <div class="pop-desc">${item.desc}</div>
+    <a class="pop-route" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      Rota no Google Maps
+    </a>`;
+  m.bindPopup(popupHtml);
+  markers[item.id] = m;
+  latlngs.push([item.lat, item.lon]);
+});
+const initialBounds = L.latLngBounds(latlngs);
+map.fitBounds(initialBounds, { padding:[26,26] });
+
+/* ===================== controles do mapa ===================== */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+let userMarker = null;
+document.getElementById('locateBtn').addEventListener('click', ()=>{
+  const btn = document.getElementById('locateBtn');
+  if(!navigator.geolocation){ showToast('Geolocalização não é suportada neste navegador'); return; }
+  btn.classList.add('busy');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    btn.classList.remove('busy');
+    const { latitude, longitude } = pos.coords;
+    if(userMarker) map.removeLayer(userMarker);
+    userMarker = L.circleMarker([latitude, longitude], {
+      radius:8, color:'#ffffff', weight:2, fillColor:'#4285F4', fillOpacity:1
+    }).addTo(map);
+    map.setView([latitude, longitude], 17);
+  }, err=>{
+    btn.classList.remove('busy');
+    showToast('Não foi possível obter sua localização');
+  }, { enableHighAccuracy:true, timeout:10000 });
+});
+
+document.getElementById('resetViewBtn').addEventListener('click', ()=>{
+  map.fitBounds(initialBounds, { padding:[26,26] });
+});
+
+/* ===================== init ===================== */
+buildChips();
+renderCards();
+</script>
+</body>
+</html>
