@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>São Paulo — guia de viagem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg: #17181b;
+    --bg-elev: #201f22;
+    --bg-elev-2: #29282c;
+    --ink: #f2efe9;
+    --ink-dim: #aeaba3;
+    --ink-faint: #7c7a76;
+    --line: rgba(242,239,233,.10);
+    --line-strong: rgba(242,239,233,.18);
+    --select: #ffd166;
+    --select-ink: #201a06;
+
+    --c-museus: #78a9cc;
+    --c-parques: #6fbb8d;
+    --c-arquitetura: #e0a83a;
+    --c-religioso: #d67a55;
+    --c-compras: #ac93d1;
+    --c-passeios: #ef9463;
+    --c-hospedagem: #93a9b6;
+    --c-restaurantes: #e2645c;
+    --c-pessoal: #5c8ab5;
+
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-tap-highlight-color: transparent; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,209,102,.05), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: 40px;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 18px; }
+
+  h1,h2,h3, .disp{ font-family:'Space Grotesk', 'Inter', sans-serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* ---------- header ---------- */
+  header{ padding:34px 0 18px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.16em;
+    color: var(--select);
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px; height:1px; background: var(--select);
+    display:inline-block;
+  }
+  header h1{
+    font-size: clamp(26px, 4.6vw, 38px);
+    line-height:1.12;
+    font-weight:700;
+    margin:0 0 12px;
+    max-width: 17ch;
+  }
+  header p{
+    font-size:14.5px;
+    line-height:1.55;
+    color:var(--ink-dim);
+    max-width:52ch;
+    margin:0;
+  }
+
+  /* ---------- map ---------- */
+  .map-wrap{ position:relative; margin-top:22px; }
+  #map{
+    height: 340px;
+    border-radius: var(--radius);
+    border:1px solid var(--line-strong);
+    background:var(--bg-elev);
+  }
+  @media (max-width:640px){ #map{ height:280px; } }
+
+  .map-controls{
+    position:absolute; top:12px; right:12px; z-index:1200;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .map-btn{
+    width:38px; height:38px; border-radius:50%;
+    background:var(--bg-elev-2); border:1px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink); cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.4);
+    transition: all .15s ease;
+  }
+  .map-btn svg{ width:18px; height:18px; }
+  .map-btn:hover{ background:var(--bg-elev); border-color:var(--select); color:var(--select); }
+  .map-btn.busy{ opacity:.45; pointer-events:none; }
+
+  .leaflet-popup-content-wrapper{
+    background:var(--bg-elev-2); color:var(--ink);
+    border-radius:12px; border:1px solid var(--line-strong);
+  }
+  .leaflet-popup-tip{ background:var(--bg-elev-2); }
+  .leaflet-popup-content{ margin:12px 14px; font-family:'Inter',sans-serif; }
+  .pop-cat{ display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; opacity:.75; margin-bottom:4px;}
+  .pop-cat img, .pop-cat svg{ width:12px; height:12px; object-fit:contain; }
+  .pop-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px; margin-bottom:6px; }
+  .pop-desc{ font-size:12.5px; line-height:1.45; color:var(--ink-dim); margin-bottom:8px; }
+  .pop-price{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--select); margin-bottom:10px; }
+  .pop-route{
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em;
+    border:1px solid var(--line-strong); background:transparent; color:var(--ink);
+    padding:8px 12px; border-radius:8px; text-decoration:none;
+    transition: all .15s ease;
+  }
+  .pop-route:hover{ background:var(--select); color:var(--select-ink); border-color:var(--select); }
+  .pop-route svg{ width:13px; height:13px; }
+  .leaflet-container a.leaflet-popup-close-button{ color:var(--ink-dim); }
+
+  /* ---------- controls (sticky) ---------- */
+  .controls{
+    position:sticky; top:0; z-index:20;
+    background: linear-gradient(var(--bg) 78%, transparent);
+    padding:16px 0 10px;
+    margin-top: 4px;
+  }
+  .search{
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg-elev); border:1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding:10px 14px; margin-bottom:12px;
+  }
+  .search svg{ flex:none; opacity:.55; }
+  .search input{
+    background:none; border:none; outline:none; color:var(--ink);
+    font-family:'Inter',sans-serif; font-size:14.5px; width:100%;
+  }
+  .search input::placeholder{ color:var(--ink-faint); }
+
+  .chips{
+    display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;
+    scrollbar-width:none;
+  }
+  .chips::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:none;
+    display:flex; align-items:center; gap:7px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px; letter-spacing:.02em;
+    color:var(--ink-dim);
+    background:var(--bg-elev);
+    border:1px solid var(--line-strong);
+    padding:8px 13px 8px 10px;
+    border-radius:100px;
+    cursor:pointer;
+    user-select:none;
+    transition: border-color .15s, color .15s, background .15s;
+    white-space:nowrap;
+  }
+  .chip .dot{ width:8px; height:8px; border-radius:50%; flex:none; background:var(--select); }
+  .chip .chip-icon{ width:14px; height:14px; object-fit:contain; flex:none; }
+  .chip .count{ opacity:.6; }
+  .chip.active{ color:var(--ink); background:var(--bg-elev-2); border-color:var(--line-strong); }
+  .chip:hover{ border-color: var(--ink-faint); }
+
+  /* ---------- grid / cards ---------- */
+  #grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+    gap:12px;
+    margin: 14px 0 10px;
+  }
+  .card{
+    position:relative;
+    background:var(--bg-elev);
+    border:1px solid var(--line);
+    border-left:3px solid var(--cat-color, var(--line));
+    border-radius: var(--radius-sm);
+    padding:14px 14px 15px;
+    cursor:pointer;
+    transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    animation: rise .35s ease both;
+  }
+  .card:hover{ background:var(--bg-elev-2); }
+  .card:active{ transform: scale(.985); }
+  .card-top{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:10px; margin-bottom:8px;
+  }
+  .cat-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--cat-color);
+  }
+  .cat-tag img, .cat-tag svg{ width:15px; height:15px; object-fit:contain; }
+  .route-btn{
+    flex:none;
+    width:26px; height:26px; border-radius:50%;
+    border:1.5px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink-dim); text-decoration:none;
+    transition: all .15s ease;
+  }
+  .route-btn svg{ width:13px; height:13px; }
+  .route-btn:hover{ background:var(--select); border-color:var(--select); color:var(--select-ink); }
+  .card h3{
+    font-size:16px; font-weight:600; line-height:1.28;
+    margin:0 0 6px;
+  }
+  .card p{
+    font-size:13px; line-height:1.5; color:var(--ink-dim);
+    margin:0;
+  }
+  .price-tag{
+    display:inline-flex; align-items:baseline; gap:4px;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; font-weight:600;
+    color: var(--select);
+    border:1px solid rgba(255,209,102,.35);
+    background:rgba(255,209,102,.08);
+    padding:4px 10px; border-radius:100px; margin-top:11px;
+  }
+  .price-tag .unit{ color:var(--ink-faint); font-weight:400; font-size:10.5px; }
+  .empty{
+    grid-column:1/-1; text-align:center; padding:50px 20px; color:var(--ink-faint);
+    font-size:13.5px;
+  }
+
+  @keyframes rise{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){ .card{ animation:none; } }
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px);
+    background:var(--ink); color:var(--bg); font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    padding:10px 16px; border-radius:100px; z-index:50; opacity:0; pointer-events:none;
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Guia de Viagem · São Paulo</div>
+    <h1>São Paulo, na palma da mão</h1>
+    <p>73 pontos entre cultura, parques, arquitetura, compras, hospedagem, restaurantes e endereços pessoais. Toque num cartão para ver no mapa, ou use o ícone de rota para abrir o caminho direto no Google Maps.</p>
+  </header>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-controls">
+      <button class="map-btn" id="locateBtn" title="Minha localização" aria-label="Minha localização">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </button>
+      <button class="map-btn" id="resetViewBtn" title="Ver todos os pontos" aria-label="Ver todos os pontos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v6h6M20 10V4h-6M4 10V4h6M20 14v6h-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="Buscar por nome…" />
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="grid"></div>
+</div>
+
+<div class="toast" id="toast">Não foi possível obter sua localização</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===================== ícones (seus símbolos do KMZ, em base64) ===================== */
+const PIN_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAMAAACdt4HsAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAzFBMVEUAAAD7+/sAAAD///8AAAD///8AAACMjIz////z8/P///////////////////////94eHj////n5+cwMDD////Y2Nj39/cAAAD////////////U1NSgoKC8vLz////7+/v///+wsLBMTEx4eHiYmJj////IyMjIyMjf39////////+cJ7D78/vQnNukNLT37/fr1O/IjNTMlNioPLjv2/OoRLzz4/O8cMjYqN/AeMysTLzfvOfnzOu4ZMTEfNDbsOPfuOOwVMDjxOu8aMjUGXGAAAAAKnRSTlMA+xXvTEowfBzq23SwJOqQcxTUWiy88zzUYMC4jJ9/a4iUYy+EV6hQyMz3NUSNAAACrUlEQVR42u391XrrOhSEAUh2OBxOyuWOKRwsv/87bbkouSLnfOfyvypoxtJaI7gkapxcrp9h9HM5h6TGyWUEUno48afzt/elHqW90v1tPp5ICgv29UaXgoN2G2wWlnKHyVtMNA5W29Dzwu0qGLNfW8zCsdO3u0AULDyORRAB3baNg5NpFOFPQy9BOPVRbJgdnMw1xXjhSViMQa+NDpljYO0pWAPHGb2+n6eYekqmoPm+Tu9c9hB4GgL0LnWLyLSw87Ts0NIsIneBZag3CJe4UAeq7WLlGVjBbav0zgn2npE9TlRVyBXxaDZ4RFG1hjzm4thZMPf9eTAT/zpHXmFwlIjAxP/civ5E+PMUR3K9U8QrPzD43c1CNl5RlBfhCj4/7p0/D975//i4khrcYcwPm/MGQnHGuJMaDPEsTFSAX9wzhlKDsrDUJ9HgiftXgLLU4FRowkQ04Bsxxen/M4Mz+xqcSQ2yeONGabrwhqzUoICIH6bOQYSC1IDUIKRelcQZanI9qSROA8VeWKGiMCgLVfRUu/FZ0QRCqmIRVESoKgzIwO5AGaj0LIsvZoMXRQ5jChShSR+CFpQGrA8Tk8FE2YOYLJYmg6Uihl8MsNHrN5oSxgyTB3OSueIw+aGkn8IGJb2eTUFbhaVpAnEVNI2YGCoQk0WkzEIY6VvwyUj3xBmZ9aRDsZXrt6AdCwNSV13ye9Rt9KRZE87gH55Qa1oZkBv4s7/6mY8bYklF9tTaaXeRSMH9m8cN3IK1Acujn3jtLnxzBnkqyU7sUywghnVCeO5MrTvwTVa4DtlFmSUpqXOPVvY8rZPUPPz2coeH9HpSdb839gRu9QCDuAwf98zjAQX45BwRi/Qswjk5kFH88BtbHQJymiWs1yg1DzYgHRdwO+Q/kD24gN+Uy4YB/wCwUDNGb6AZgQAAAABJRU5ErkJggg==";
+const BAG_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAvVBMVEUAAAAAAAAAAAAAAAAAAAD////Q0ND///90dHTr6+tcXFyUlJT39/f///////////////////////////98fHz///8AAADn5+f///8AAADMzMz////z8/P7+/v39/f///////////+wsLDMzMyIiIj///+oRLz79/ucJ7Dv3/P36/f7+/+kOLSgLLC4ZMTQnNu8bMjIiNTUpN+wVMDYqN+gNLTIhNCgMLTnzO/btOPz6/ewUMDfvOfEfNDMlNhCHCKTAAAAJXRSTlMATjwsDJC093DYaIDzJkzH0GjjvHcwE9DvIbDf5/frPAg0lIBIMf/BzAAAAtxJREFUeNrt/cVi6zAQRQFYZkOSNhwqj9l2ONj+/2c9mW0Zl29z0wYkHQ9oBEvqP1HvlRutVF1XVyPutdeVmnBDKGjITTpg/QEeat3Onua4rqN555uFGwb9FuwTY9b+YBR02GN28NmAfXAA993FKOmyuwNwH3Vc7wVsvwILUd+Gl5o0vc/BfBi1epgwf6/i+gI8T0aDTk8QKnL0LsDRNRrlHkEo2ezN4Wi06ghzIs6PF3i67aD7hJdibjkwT0YHnUzg8twn2GQ+Hd/UddN3iOaHDflKGIBPDPjVozrVf4kOHwYZ14c7Me+/AXO9BjRBXu7QzxncFXs1TAQ1dPExrxX7dpnJCVgX0p/E9+xbatKCSZrSfbHPMMGOk3yywSQ692lih5BfR9p2u9XB2sayQMfveXcPMIy4Hli55iNUKl9WFkTl8wq3rNGDGnnZmBu8xiGes8ZdOOrhHBLg4DzCz79szDkOcpR/2l802jDuEWcGMRGgB6MQXIFGgngGthG4DWekCGqwCkEVHBLUccvWxPYw5+gk6IAagja4JAjXoEkLPHGvQIIu2CEoVIBwjb1wYq4ICnWuBt7uPU3z9jqUwcTVdTk5FSokZx2Cs/J0NIMezEKQzxdAF/AMfAh+50uuC3iD7xD8yRd5F9CCnxBcvOWWVQfwAG+LEGSXuYXcAdzDko0WpJjbOtpBvHWIEUcxUrZZtYM7kJgYZJVse9zVgcmj8faoxJ5SFC2lW5lmV3N2Ul0+SHTCUVMxOwKC1VRWsL5C4SNAnKYgRfPdDx0+M4hNou7HHMoZxImVux6sMkMVRI83XY7yzZguchSLlE375WGjIJYAcZjj9uvKuBhgQsptFyS5igtIxDddyXhUzeE4aSRKdZdASUQ0S9WJQUjBaPnaKSkIMVSDpjRC4vKtWG9vSxEheko1K0CR/MXP1qogqOsZ/yWjDlgglgnYnGiGpTqKXTB0SNM0s6im/gEjSk7Y1JFP3AAAAABJRU5ErkJggg==";
+const BED_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAyVBMVEUAAAAAAAAAAAAAAAAAAADPz8////90dHT////r6+tcXFyTk5P////39/f///////////////98fHz///8AAADv7+/39/fn5+f///8AAADLy8vz8/P7+/v///////////////////////+vr6/Ly8uHh4f///8AAAAMDAxwcHD7+/vn5+enp6evr68kJCTb29tISEgwMDCXl5eAgIA4ODgUFBTr6+uTk5MEBARAQECLi4sICAjz8/ODg4PPz89UVFTj4+PDw8McHBxmPG3AAAAAJnRSTlMATjwMLLP3cJLXaIDj8yRMymh3vRPe68/vIK/n947PPDAINJaASDGDAYwAAAKPSURBVHja7f3FkuswEAVQSOZwOJzhltnh4OD/f9RTDLGcMWh2b3OXKZ203RYt0X+SekvrVGumWat2tFadVz3OqpBIdfbIwRpNOtSyjYW7PZ+37sKwLfpDs1HAninb7Tckkc1+R+lzDnvSaDFDJ7+iG7Ss9pTl6nMwTynMpycT5hltehiCtySZWXowfEhzDQUcneREd0BJ6dGDAqsDyc1hBcqvmvUhrEhhVjC8e8+nOTiHYnhwYJ7srQaeTjiie6Cx7hnMJeHK0gR2JjThRDhzgmbsGmDpvFC3oMEUNIJf1+tjoTTiko+wCwsCrAuhvoNolc1gT/gh2cMshFXYJODnyr4ukeMljuXEXd9ANXB1sAgDD/Z11Xs/5JjYBszPm7QgmD4tsFloBAOdOwgXNxplQ8uHWtTTAH6EA7d3MP7URjh7OrBg4S4ct7yHXjRqAZ2wNy5XxUs0yg27U4MtzzsCRKO2UPOhCWcWZnSVgWcwfagkYfwds6GS9qi3FD7qhG3O1/ctH1nQhYkPB+znyEs0agEDH8rsBOCBBsg+fGWnHA+04dWHb+wkf9cz8h5DC958OOrfLavUrG9wA/2RD8Uxz0KO4R7GYrAgVZ6t4wbp1qEGDkkljs3quA7/04CSFEKx8rftsRI+KUJC6S8bckmIHOqqfzkC1O4NIkHmP3TkuCAtiXu8x1wPMwVpY8u8B2tZQokI7SnPUT5tC0mHRFyZFl8ephUs3kH6mu3i60o7+YKRLPfyL0i9cpq7SiznXclknO7oewpYLWVdAksqFkSUFQnjCqW/r52lCsYSyklXwFgd95NbRn+sYix0UX6uFJdf5MGkpii1yUB+KWMOdo1IHzgZSUScEUeSEBhBGqWrf1WOTKxokTOoAAAAAElFTkSuQmCC";
+const FORK_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAwFBMVEUAAAAAAAAAAAAAAAD///8AAAD////r6+tbW1uTk5Nzc3P///////8AAAD///97e3v////////39/fT09P////////v7+/Ly8v7+/v////n5+f7+/sAAADPz8/////39/fz8/MYGBj///////////+vr693d3fLy8uHh4f/////n5//UlL/x8f/+/v/W1v/7+//8/P/d3f/V1f/5+f/X1//a2v/g4P/i4v/u7v/r6//t7f/4+P/19f/c3P/k5P/h4dYBXZrAAAAKXRSTlMATj0Mkiz32meCciZME8d3Z+PztjC73q/3z8/zIbPf6+dSPAg0lmeCSEQ3qZwAAAL/SURBVHja7f3FguMwDIYBxMFyuVwYHoXD5Xn/t1qH7caF417+U6P6iyCy7CP3n6jZE8ebgSwPNmOx13yVGol9oNQXRy9grQ5eaulqGPiu6wehqlvY0Gk9wT4xZh8djZJztDH6+QD7ELEz1dQqMlXsVvy4xzXnYBwYWIIeDJjfKdP7EryLdlcXD5bvLK4lg25qD2TqIDNq9C7DXnuiPcgVn83lcy4mlzd5fsxB116QDnO6tiJ45iug6YFIcp9gPKino6pR/tqLAWQndOCQ/bF3brHIi/vV/sseD9ApuRZY2Rv/wKZJd591eh6SaUGLcKhm63T8bipovdgjefHU0uUI7DwFG2hSLTeXlZlMG0ZFSY/5QgMo0rRL0MiNx6KwfSjyOqUvD7LHK7GdvXyNA/2UaxZRxDWjyD0Blo1lQdo+PaJpfJsizwRYZq5DL0tRLWxaaJCkznKIK5YmOYZQu0OWRT0RHRnCOAE3EGgM8owDP+Xc2SdWBLBJwAGQVtw9Cen5JWepLrnAh0ECGkCZcXdi0gsSzggd9erc/O+CkYDyLYhJnKGJS2r8aQy5IDNDjcmUA8tngXmoO7o4qcz0E55YZAC7BFxQn6PkDDxKmWQIiwQckg1AcFHyZRikCsME/KnMKTeOM9K0O6QOPwn4SzR5yV2Tn0zSgt8EXG2BGheuXnBpN5zpAejAdpWAwrTcyLccizzCVEg35Hc5OjKOrFZ0Q+Kp8J1ynKSUKytchVRBkTJQqBfjUYsqXEoWNjwe61mkHMcrxUDGw6PyVfHoKbfxARQ+57h2gzgCKqOcsuEjoNEuQI5fv37orEuH2OXb5NVjbvJGOMSFrb16sNYkjhLfnb1ylM+6PM1xAqrPnl8eZnUk3IBcG3WfX1e6CCdYJWuTxxekSY3FxeTb+tGVbP3G5nCePGoo9y6BSgPxAndPEkJ1BRjXTqWOkMQ9UJtHqDHdAqXttIEQ3+YeK0ZR7Wu42MVX691i+FVDL2CxBBwwLUngXpSwkvjYM+J5acWm/gF/1Gon+6UQowAAAABJRU5ErkJggg==";
+const BLUE_PIN_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAMAAACdt4HsAAAACXBIWXMAAAAcAAAAHAAPAbmPAAAAvVBMVEUAAAAAAADz8/P7+/v///8AAAD///8AAACLi4v///8AAAD///////////97e3v///+fn5/n5+f///8vLy/X19f39/f////////////////////////T09P///9OTk7////Hx8f7+/uvr6+7u7t7e3vHx8ff39//////////+/v/p6f/UlL/X1//19f/Z2f/V1f/r6//v7//c3P/l5f/9/f/j4//8/P/7+//5+f/y8v/g4P/6+v/39//t7f/4+M/Wt3OAAAAKHRSTlMAFef7707qKX4cPHMkj3cUi9MuWrvzTkrTv6+zt1tjf6drk58vTsdSb0CyOQAAAqlJREFUeNrt/cd64jAURgHIjU6H1Jn0JL8LuJvO+z/WyKkWUYN8szy7xLrHukUySyLGqLdaDqXVqhvkaIy6w3Ckwyhf3bh7MaeWNTVf7hrlRo5Q0Lf3JhYqWJMe3YVmuEHDhzRoG+VJEIZBkkdb+ueQKgy9+PEEKLy5X2HuFcBkrGMwnJ4J1wv8AwLPhdlTGwxnYGE29znMZ7AGSoMzAHahzyXcAQNHHt9qWPB8IR6sRksWX7+ZIvIlRJjeyLrpDLHypawwlCRRf8AmkAuCDR7EWxjbyH0FOeyxKN54xMxXMsOjqJX1GtZqwRo1UQ4NLNm182ibZdvoYKyWaAgEfw5GgA7vG+7Bv/GHH2+YSKoLo+/TzMxGApNfhCdk1XXr6n3A1CbDE1fwzPZgXxXsq09meOYK7hEzG2WoJhfjnitoM6mmrCCtPIrQ5gpumSZ4rIB9dPt/dvDrGpyxR1nchRXOuIImFtVl4jlYoMkVkBqYqRdN4hw1fjy5PrgNBGchx7VA0Gaq6ItOYyxoAiEdFIILvUpYoCMQkAu9C+VCFE9nMVYLYsEcljRdN1DFB67bFApoHzyVwBP2oOQcG0UZww3OJQJaxlQuSCUlLPnLTv1P9vgrFRBT/m3KYcrj6RaWkiqES9UGFFVQVaDkDAvhLAQLwU3AcImdSLDDpTqejFw34ccnrjvSEJCu6CM/Q1cnnvRr/DqmqPW1BLSVBeeH4rxQt/CTK95PrRWudONJ0/6ZRAq7qS2gSWQHScwz/QRKrg47MTsigRLaCeZq8bQ78Mk5quOUuPJrhEcXy68zESw1R4jh4ruXK41D+JOO/VkGD3bnBAF5hfv2nVm7eCUn0cWCTsN8cUoB3rnELAxnWpcAn76JOIbZP1lARjZgj8gvOIPOLSij3VYs+AfsXzAuFASbVAAAAABJRU5ErkJggg==";
+
+/* ===================== dados ===================== */
+const CATS = {
+  museus: { label:"Museus e Cultura", color:"var(--c-museus)", hex:"#78a9cc", marker:PIN_ICON, markerType:"pin",
+    svgIcon:'<path d="M3 21h18"/><path d="M4 21V10.5"/><path d="M8.5 21V10.5"/><path d="M13 21V10.5"/><path d="M17.5 21V10.5"/><path d="M2.5 10.5 12 4l9.5 6.5"/>' },
+  parques: { label:"Parques e Natureza", color:"var(--c-parques)", hex:"#6fbb8d", marker:PIN_ICON, markerType:"pin",
+    svgIcon:'<circle cx="12" cy="10" r="6"/><path d="M12 16v5"/>' },
+  arquitetura: { label:"Arquitetura e Mirantes", color:"var(--c-arquitetura)", hex:"#e0a83a", marker:PIN_ICON, markerType:"pin",
+    svgIcon:'<path d="M4 21V9l4.5-3.2V21"/><path d="M13 21V5l4.5-2.2V21"/><path d="M3 21h18"/>' },
+  religioso: { label:"Religioso e Histórico", color:"var(--c-religioso)", hex:"#d67a55", marker:PIN_ICON, markerType:"pin",
+    svgIcon:'<path d="M12 3v3.2"/><path d="M7.2 9.5a4.8 4.8 0 0 1 9.6 0V13H7.2z"/><path d="M5 21v-8h14v8"/><path d="M3 21h18"/>' },
+  passeios: { label:"Passeios e Bairros", color:"var(--c-passeios)", hex:"#ef9463", marker:PIN_ICON, markerType:"pin",
+    svgIcon:'<path d="M12 21s7-7.4 7-12.2A7 7 0 0 0 5 8.8C5 13.6 12 21 12 21Z"/><circle cx="12" cy="8.6" r="2.3"/>' },
+  compras: { label:"Compras", color:"var(--c-compras)", hex:"#ac93d1", marker:BAG_ICON, markerType:"badge",
+    imgIcon: BAG_ICON },
+  hospedagem: { label:"Hospedagem", color:"var(--c-hospedagem)", hex:"#93a9b6", marker:BED_ICON, markerType:"badge",
+    imgIcon: BED_ICON },
+  restaurantes: { label:"Restaurantes", color:"var(--c-restaurantes)", hex:"#e2645c", marker:FORK_ICON, markerType:"badge",
+    imgIcon: FORK_ICON },
+  pessoal: { label:"Pessoal", color:"var(--c-pessoal)", hex:"#5c8ab5", marker:BLUE_PIN_ICON, markerType:"pin",
+    imgIcon: BLUE_PIN_ICON }
+};
+
+function catGlyph(key, size){
+  size = size || 15;
+  const c = CATS[key];
+  if(c.imgIcon){
+    return `<img src="${c.imgIcon}" style="width:${size}px;height:${size}px" alt=""/>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${c.svgIcon}</svg>`;
+}
+
+const DATA = [
+  {id:1, cat:"parques", name:"Pavilhão Japonês", lat:-23.5859989, lon:-46.6619324, desc:"Réplica de um palácio tradicional japonês, com jardim e lago de carpas dentro do Parque do Ibirapuera. Um recanto de calma no meio da cidade."},
+  {id:2, cat:"parques", name:"Jardim Botânico de São Paulo", lat:-23.641624, lon:-46.6234092, desc:"Ampla área de Mata Atlântica preservada, com trilhas, viveiro de orquídeas e um museu botânico, na zona sul da cidade."},
+  {id:3, cat:"museus", name:"Teatro Renault", lat:-23.5542941, lon:-46.6384966, desc:"Um dos grandes teatros da cidade para musicais e espetáculos, na Rua Augusta — o nome muda de tempos em tempos conforme o patrocinador."},
+  {id:4, cat:"museus", name:"Museu da Imagem e do Som (MIS)", lat:-23.5727597, lon:-46.6761582, desc:"Dedicado a cinema, fotografia e música, com exposições sobre a cultura brasileira, perto do Parque Ibirapuera."},
+  {id:5, cat:"passeios", name:"Feira Benedito Calixto", lat:-23.5583923, lon:-46.6807078, desc:"Feira de antiguidades, arte e música ao vivo aos sábados, na Vila Madalena — clima descontraído, ótima para passear sem pressa."},
+  {id:6, cat:"parques", name:"Zoológico de São Paulo", lat:-23.6508432, lon:-46.6204215, desc:"Um dos maiores zoológicos do Brasil, em meio à mata nativa, com centenas de espécies — passeio para o dia inteiro."},
+  {id:7, cat:"parques", name:"Aquário de SP", lat:-23.5934539, lon:-46.6141541, desc:"Aquário temático com tubarões, pinguins e réplicas de ambientes como o Pantanal e a Amazônia, na Vila Guilherme."},
+  {id:8, cat:"parques", name:"Parque Villa-Lobos", lat:-23.5457827, lon:-46.720578, desc:"Um dos parques mais completos da cidade, com pistas de caminhada e ciclismo, museu do Villa-Lobos e boa estrutura para piquenique."},
+  {id:9, cat:"arquitetura", name:"Edifício Itália", lat:-23.545404, lon:-46.6436776, desc:"Um dos prédios mais altos do centro, com terraço panorâmico no último andar para ver a cidade de cima, ao pôr do sol."},
+  {id:10, cat:"arquitetura", name:"Edifício Martinelli", lat:-23.5456156, lon:-46.634976, desc:"O primeiro arranha-céu de São Paulo, dos anos 1920, com terraço aberto à visitação e vista para o centro histórico."},
+  {id:11, cat:"parques", name:"Parque Estadual da Cantareira – Pedra Grande", lat:-23.4544266, lon:-46.6359302, desc:"A maior floresta urbana do mundo. A trilha até a Pedra Grande leva a um mirante com vista panorâmica de toda a cidade."},
+  {id:12, cat:"religioso", name:"Templo de Salomão", lat:-23.53763, lon:-46.6064769, desc:"Réplica em escala real do Templo de Salomão, sede da Igreja Universal no Brás — impressiona pelo tamanho e pelos detalhes."},
+  {id:13, cat:"religioso", name:"Solo Sagrado de Guarapiranga", lat:-23.7511059, lon:-46.7456312, desc:"Santuário da Igreja Messiânica às margens da represa Guarapiranga, com jardins floridos e um templo aberto em forma de anel."},
+  {id:14, cat:"compras", name:"JK Iguatemi", lat:-23.5914102, lon:-46.6897221, desc:"Shopping de alto padrão na Vila Olímpia, com grifes internacionais e boa praça de alimentação."},
+  {id:15, cat:"compras", name:"Shopping Pátio Higienópolis", lat:-23.5422843, lon:-46.6575016, desc:"Shopping tradicional e elegante, num bairro residencial charmoso — bom para compras mais tranquilas."},
+  {id:16, cat:"museus", name:"Museu da Imigração de SP", lat:-23.549695, lon:-46.612694, desc:"Instalado na antiga Hospedaria dos Imigrantes, no Brás, conta a história de milhões de imigrantes que passaram por São Paulo."},
+  {id:17, cat:"museus", name:"Museu Judaico", lat:-23.5508137, lon:-46.6456471, desc:"Dedicado à história e à cultura judaica em São Paulo e no Brasil, com acervo de objetos, fotos e depoimentos."},
+  {id:18, cat:"museus", name:"Museu da Imigração Judaica e do Holocausto", lat:-23.5297566, lon:-46.6385586, desc:"Espaço dedicado à memória do Holocausto e à trajetória de imigrantes judeus em São Paulo."},
+  {id:19, cat:"museus", name:"Memorial da Imigração Judaica e do Holocausto", lat:-23.5297467, lon:-46.6385169, desc:"Memorial com relatos e objetos de sobreviventes — fica no mesmo complexo do museu vizinho, praticamente porta a porta."},
+  {id:20, cat:"hospedagem", name:"INNSiDE by Meliá São Paulo Itaim", lat:-23.582688, lon:-46.678101, desc:"Hotel no Itaim Bibi — provavelmente a base de hospedagem da viagem, não exatamente um passeio."},
+  {id:21, cat:"parques", name:"Jardim Oriental Liberdade", lat:-23.5562335, lon:-46.6354609, desc:"Pequeno jardim japonês tradicional perto da Praça da Liberdade, com lago, pedras e lanternas."},
+  {id:22, cat:"museus", name:"Planetário do Ibirapuera – “Aristóteles Orsini”", lat:-23.5843334, lon:-46.6609137, desc:"Sessões de astronomia sob uma cúpula, dentro do Parque Ibirapuera — bom passeio para observar o céu de perto."},
+  {id:23, cat:"religioso", name:"Catedral da Sé", lat:-23.5512802, lon:-46.6343427, desc:"Catedral neogótica no coração histórico da cidade, um dos maiores templos católicos do mundo — o marco zero de São Paulo."},
+  {id:24, cat:"religioso", name:"Pateo do Collegio", lat:-23.5479871, lon:-46.6326193, desc:"Local onde os padres jesuítas fundaram São Paulo em 1554 — hoje um museu e capela que contam a origem da cidade."},
+  {id:25, cat:"religioso", name:"Mosteiro de São Bento", lat:-23.5435648, lon:-46.6343548, desc:"Mosteiro beneditino do início do século XX, famoso pelo canto gregoriano nas missas de domingo e pela bela arquitetura interna."},
+  {id:26, cat:"passeios", name:"Mercado Municipal de São Paulo", lat:-23.542357, lon:-46.6296374, desc:"O “Mercadão”, famoso pelo sanduíche de mortadela e pelo pastel de bacalhau, com um vitral histórico no salão principal."},
+  {id:27, cat:"museus", name:"MASP – Museu de Arte de São Paulo", lat:-23.561414, lon:-46.6558819, desc:"Um dos museus mais importantes da América Latina, no icônico prédio suspenso da Av. Paulista."},
+  {id:28, cat:"parques", name:"Parque Trianon", lat:-23.5615399, lon:-46.657111, desc:"Pequeno pedaço de Mata Atlântica preservada bem no meio da Av. Paulista, ao lado do MASP — um respiro verde entre os prédios."},
+  {id:29, cat:"museus", name:"Sesc Avenida Paulista", lat:-23.5705156, lon:-46.645615, desc:"Centro cultural com exposições, teatro, cinema e restaurante, num prédio moderno logo depois do Trianon."},
+  {id:30, cat:"arquitetura", name:"Mirante – Sesc Avenida Paulista", lat:-23.570617, lon:-46.6454968, desc:"Terraço do Sesc Paulista com vista aberta para a avenida — bom programa de fim de tarde."},
+  {id:31, cat:"parques", name:"Parque Ibirapuera – Portão 4 (bikes)", lat:-23.5896838, lon:-46.6534929, desc:"Portão do Parque Ibirapuera mais indicado para quem quer alugar bicicleta e circular pelo parque com facilidade."},
+  {id:32, cat:"museus", name:"Museu de Arte Contemporânea (MAC USP)", lat:-23.5889906, lon:-46.6509962, desc:"Acervo de arte contemporânea brasileira e internacional, num edifício modernista dentro do Parque Ibirapuera."},
+  {id:33, cat:"museus", name:"Fundação Bienal de São Paulo", lat:-23.588009, lon:-46.653839, desc:"Pavilhão assinado por Oscar Niemeyer que sedia a Bienal de Arte e outras grandes exposições, dentro do Ibirapuera."},
+  {id:34, cat:"passeios", name:"Bairro da Liberdade", lat:-23.5551495, lon:-46.6359496, desc:"Bairro japonês da cidade, com lojas, templos, restaurantes orientais e a tradicional feira de artesanato de fim de semana."},
+  {id:35, cat:"passeios", name:"Beco do Batman", lat:-23.5571408, lon:-46.6865433, desc:"Vielas da Vila Madalena cobertas de grafites que mudam com frequência — point certo para fotos e arte urbana."},
+  {id:36, cat:"compras", name:"25 de Março", lat:-23.5429435, lon:-46.6323846, desc:"Rua e região super movimentadas no centro, famosas pelo comércio popular — vale para sentir o pulso comercial da cidade."},
+  {id:37, cat:"compras", name:"Oscar Freire (Galeria Melissa)", lat:-23.5636382, lon:-46.6686738, desc:"A rua mais chique de São Paulo, com grifes de luxo e a colorida Galeria Melissa — boa para andar e olhar vitrines."},
+  {id:38, cat:"museus", name:"Japan House São Paulo", lat:-23.5705, lon:-46.6446, desc:"Centro cultural japonês na Av. Paulista, com exposições, loja e restaurante — boa introdução ao design do Japão."},
+  {id:39, cat:"museus", name:"Casa das Rosas (Café Ristoro)", lat:-23.5710635, lon:-46.6451532, desc:"Casarão de 1935 na Paulista, hoje centro cultural com jardim, livraria e um café agradável para uma pausa."},
+  {id:40, cat:"museus", name:"Instituto Itaú Cultural", lat:-23.5703654, lon:-46.6458822, desc:"Espaço com exposições gratuitas, biblioteca e programação cultural variada, na Av. Paulista."},
+  {id:41, cat:"museus", name:"Museu do Ipiranga (Museu Paulista)", lat:-23.585578, lon:-46.609679, desc:"O clássico prédio neoclássico no Parque da Independência, reformado e reaberto em 2022, com acervo sobre a história do Brasil."},
+  {id:42, cat:"arquitetura", name:"Estação Luz", lat:-23.535105, lon:-46.6349318, desc:"Estação ferroviária histórica de 1901, com estrutura de ferro trazida da Inglaterra — hoje também abriga o Museu da Língua Portuguesa."},
+  {id:43, cat:"museus", name:"Museu da Língua Portuguesa", lat:-23.5349671, lon:-46.6351641, desc:"Museu interativo sobre a língua portuguesa, dentro da histórica Estação da Luz — reaberto após um incêndio em 2015."},
+  {id:44, cat:"museus", name:"Pinacoteca do Estado de São Paulo", lat:-23.5342666, lon:-46.6339501, desc:"O museu de arte mais antigo da cidade, com forte acervo brasileiro dos séculos XIX e XX, perto do Parque da Luz."},
+  {id:45, cat:"arquitetura", name:"Sampa Sky", lat:-23.5420174, lon:-46.6357797, desc:"Mirante de vidro suspenso no 42º andar do Edifício Mirante do Vale, com decks que parecem flutuar sobre o Centro Histórico."},
+  {id:46, cat:"arquitetura", name:"Farol Santander", lat:-23.5456813, lon:-46.6340549, desc:"Mirante e centro cultural no alto do histórico Edifício Altino Arantes (antigo Banespa), com vista de 360° sobre o centro."},
+  {id:47, cat:"museus", name:"Museu Catavento", lat:-23.5440513, lon:-46.6272063, desc:"Museu de ciências interativo para todas as idades, no antigo Palácio das Indústrias, perto do Mercado Municipal."},
+  {id:48, cat:"arquitetura", name:"Teatro Municipal de São Paulo", lat:-23.5452348, lon:-46.638615, desc:"Teatro histórico de 1911, inspirado na Ópera de Paris, símbolo da vida cultural paulistana — vale a visita mesmo sem ver um espetáculo."},
+  {id:49, cat:"museus", name:"Museu Histórico da Imigração Japonesa", lat:-23.5612483, lon:-46.6351323, desc:"Conta a história da imigração japonesa para o Brasil, no coração do bairro da Liberdade."},
+  {id:50, cat:"compras", name:"Shopping Iguatemi", lat:-23.5769265, lon:-46.6882984, desc:"O primeiro shopping center do Brasil, inaugurado em 1966, ainda um dos mais tradicionais e sofisticados da cidade."},
+  {id:51, cat:"compras", name:"Morumbi Shopping", lat:-23.6233618, lon:-46.6988352, desc:"Grande shopping na zona sul, perto do Morumbi e do Ibirapuera, com boa variedade de lojas e cinema."},
+  {id:52, cat:"arquitetura", name:"Cidade Matarazzo", lat:-23.5605516, lon:-46.6532284, desc:"Antigo complexo hospitalar do início do século XX, restaurado e transformado num luxuoso conjunto com hotel Rosewood, jardins assinados por Philippe Starck e espaços culturais — vale o passeio pela arquitetura e pelos jardins."},
+  {id:53, cat:"pessoal", name:"Laís", lat:-23.5676833, lon:-46.6506324, desc:"Endereço pessoal salvo no mapa original, sem descrição adicional."},
+  {id:54, cat:"pessoal", name:"Rosana", lat:-23.534683, lon:-46.6784788, desc:"Endereço pessoal salvo no mapa original, sem descrição adicional."},
+  {id:55, cat:"pessoal", name:"Flávia", lat:-23.5690897, lon:-46.6535164, desc:"Endereço pessoal salvo no mapa original, sem descrição adicional."},
+  {id:56, cat:"pessoal", name:"Tia Sara", lat:-23.5740133, lon:-46.6582569, desc:"Endereço pessoal salvo no mapa original, sem descrição adicional."},
+  {id:57, cat:"restaurantes", name:"Mequi 1000 - McDonald's", lat:-23.5603666, lon:-46.6580263, desc:"Uma das maiores unidades do McDonald's da América Latina, funcionando 24 horas — opção prática e infalível para crianças ou quando bate aquela vontade de fast-food.", price:"R$ 30–45"},
+  {id:58, cat:"restaurantes", name:"Le Bife", lat:-23.5822442, lon:-46.6809403, desc:"Bistrô assinado por Erick Jacquin, especializado em cortes de carne com molho à escolha, batatas fritas e guarnições estilo rodízio. Selo Bib Gourmand do Guia Michelin.", price:"R$ 150–200"},
+  {id:59, cat:"restaurantes", name:"Arturito", lat:-23.5599219, lon:-46.6775784, desc:"Cozinha ítalo-mediterrânea da chef argentina Paola Carosella (MasterChef Brasil), com massas artesanais e peixes frescos — o menu executivo do almoço sai mais em conta.", price:"R$ 150–250"},
+  {id:60, cat:"restaurantes", name:"Modern Mamma Osteria", lat:-23.58188, lon:-46.6798563, desc:"O concorrido “Moma”, com massas fartas para dividir como a lasanheta de vitelo com trufas negras — espere fila, mas a comida costuma justificar a espera.", price:"R$ 150–200"},
+  {id:61, cat:"restaurantes", name:"Maní", lat:-23.5662429, lon:-46.679553, desc:"Restaurante com estrela Michelin da chef Helena Rizzo (MasterChef Brasil), cozinha brasileira contemporânea. O menu à la carte sai bem mais em conta que a degustação completa.", price:"R$ 250–700"},
+  {id:62, cat:"restaurantes", name:"Sal Gastronomia", lat:-23.5619404, lon:-46.6678049, desc:"Cozinha brasileira contemporânea do chef Henrique Fogaça (MasterChef Brasil), tempero marcante — o Aligot de cordeiro é o prato mais pedido da casa.", price:"R$ 150–220"},
+  {id:63, cat:"restaurantes", name:"Restaurante Kazu", lat:-23.5578761, lon:-46.6355277, desc:"Japonês tradicional e despretensioso no coração da Liberdade, com salada bar à vontade e pratos quentes fartos como katsudon e gyudon.", price:"R$ 80–120"},
+  {id:64, cat:"restaurantes", name:"QT Pizza Bar", lat:-23.5660241, lon:-46.6644688, desc:"Pizzaria napolitana premiada (50 Top Pizza), fermentação natural de 48h, drinks autorais e sabores criativos como gorgonzola com mel trufado.", price:"R$ 120–160"},
+  {id:65, cat:"restaurantes", name:"Botanikafé Jardins", lat:-23.5625497, lon:-46.6677741, desc:"Café cheio de plantas especializado em brunch o dia todo — ovos beneditinos, bowls de açaí e boas opções vegetarianas, pet friendly.", price:"R$ 60–90"},
+  {id:66, cat:"restaurantes", name:"Ça-Va - Erick Jacquin", lat:-23.5604537, lon:-46.6562435, desc:"Bistrô francês despretensioso de Erick Jacquin, com clássicos como steak tartar e petit gâteau — um pedacinho de Paris perto da Paulista.", price:"R$ 150–200"},
+  {id:67, cat:"restaurantes", name:"Restaurante Les Présidents (Erick Jacquin)", lat:-23.562705, lon:-46.6700846, desc:"O mais sofisticado dos restaurantes de Erick Jacquin, num casarão de fachada preta — cozinha francesa refinada, à la carte ou menu degustação de sete etapas.", price:"R$ 250–400 (degustação R$ 660)"},
+  {id:68, cat:"restaurantes", name:"Mocotó - Bar e Restaurante", lat:-23.4867177, lon:-46.5816933, desc:"Referência em comida sertaneja pelo chef Rodrigo Oliveira (MasterChef Brasil), na Vila Medeiros — famoso pelos dadinhos de tapioca. Costuma ter fila, vá cedo.", price:"R$ 80–120"},
+  {id:69, cat:"restaurantes", name:"Paul's Boutique Pizza", lat:-23.5800074, lon:-46.6748211, desc:"Fatias e pizzas inteiras estilo Nova York, massa fina e crocante, coberturas criativas como milho com bacon e mel, no Itaim Bibi.", price:"R$ 40–60"},
+  {id:70, cat:"restaurantes", name:"Padaria Gemel", lat:-23.5716638, lon:-46.6485954, desc:"Padaria e delicatessen de bairro com ares gourmet — pães, doces, salgados e bufê de almoço, famosa pela rabanada.", price:"R$ 50–80"},
+  {id:71, cat:"restaurantes", name:"Shoshana Delishop", lat:-23.5294729, lon:-46.6372304, desc:"Único restaurante de comida judaica do Bom Retiro há mais de 30 anos, com pratos da diáspora para compartilhar, em clima de boteco.", price:"R$ 80–120"},
+  {id:72, cat:"restaurantes", name:"ICI Bistro", lat:-23.5504421, lon:-46.6592171, desc:"Clássicos da cozinha francesa como steak tartare, pato confit e tarte tatin, num bistrô charmoso quase transportado de Paris.", price:"R$ 130–180"},
+  {id:73, cat:"restaurantes", name:"Mata Città", lat:-23.5618512, lon:-46.6535235, desc:"Restaurante italiano dentro da Cidade Matarazzo, com cenografia inspirada no cinema italiano dos anos 60/70 — pizzas e massas para compartilhar.", price:"R$ 120–180"}
+];
+
+/* ===================== estado ===================== */
+let activeCat = "todos";
+let searchTerm = "";
+const markers = {};
+
+/* ===================== helpers ===================== */
+function buildChips(){
+  const wrap = document.getElementById('chips');
+  const counts = {};
+  DATA.forEach(d => counts[d.cat] = (counts[d.cat]||0)+1);
+
+  const all = document.createElement('div');
+  all.className = 'chip active';
+  all.dataset.cat = 'todos';
+  all.innerHTML = `<span class="dot"></span>Todos <span class="count">${DATA.length}</span>`;
+  wrap.appendChild(all);
+
+  Object.keys(CATS).forEach(key=>{
+    const c = CATS[key];
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.dataset.cat = key;
+    el.innerHTML = `${catGlyph(key,14)}${c.label} <span class="count">${counts[key]||0}</span>`;
+    wrap.appendChild(el);
+  });
+
+  wrap.addEventListener('click', e=>{
+    const chip = e.target.closest('.chip');
+    if(!chip) return;
+    activeCat = chip.dataset.cat;
+    [...wrap.children].forEach(c=>c.classList.toggle('active', c===chip));
+    renderCards();
+  });
+}
+
+function matches(item){
+  const catOk = activeCat === 'todos' || item.cat === activeCat;
+  const term = searchTerm.trim().toLowerCase();
+  const searchOk = !term || item.name.toLowerCase().includes(term);
+  return catOk && searchOk;
+}
+
+function renderCards(){
+  const grid = document.getElementById('grid');
+  const list = DATA.filter(matches);
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty">Nenhum ponto encontrado com esse filtro.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(item=>{
+    const cat = CATS[item.cat];
+    const priceHtml = item.price ? `<div class="price-tag">${item.price} <span class="unit">/ pessoa</span></div>` : '';
+    return `
+      <div class="card" data-id="${item.id}" style="--cat-color:${cat.color}">
+        <div class="card-top">
+          <span class="cat-tag">${catGlyph(item.cat)}${cat.label}</span>
+          <a class="route-btn" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}" target="_blank" rel="noopener" aria-label="Rota no Google Maps" title="Rota no Google Maps">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          </a>
+        </div>
+        <h3>${item.name}</h3>
+        <p>${item.desc}</p>
+        ${priceHtml}
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('grid').addEventListener('click', e=>{
+  if(e.target.closest('.route-btn')) return;
+  const card = e.target.closest('.card');
+  if(!card) return;
+  const id = Number(card.dataset.id);
+  const marker = markers[id];
+  if(marker){
+    map.setView(marker.getLatLng(), 17);
+    marker.openPopup();
+    document.getElementById('map').scrollIntoView({behavior:'smooth', block:'center'});
+  }
+});
+
+document.getElementById('searchInput').addEventListener('input', e=>{
+  searchTerm = e.target.value;
+  renderCards();
+});
+
+/* ===================== mapa ===================== */
+const map = L.map('map', { scrollWheelZoom:false });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap',
+  maxZoom: 19
+}).addTo(map);
+
+function markerIcon(cat){
+  const c = CATS[cat];
+  if(c.markerType === "pin"){
+    return L.icon({ iconUrl:c.marker, iconSize:[30,34], iconAnchor:[15,34], popupAnchor:[0,-30] });
+  }
+  return L.icon({ iconUrl:c.marker, iconSize:[28,28], iconAnchor:[14,14], popupAnchor:[0,-14] });
+}
+
+const latlngs = [];
+DATA.forEach(item=>{
+  const m = L.marker([item.lat, item.lon], { icon: markerIcon(item.cat) }).addTo(map);
+  const pricePopup = item.price ? `<div class="pop-price">${item.price} / pessoa</div>` : '';
+  const popupHtml = `
+    <div class="pop-cat">${catGlyph(item.cat,12)}${CATS[item.cat].label}</div>
+    <div class="pop-name">${item.name}</div>
+    <div class="pop-desc">${item.desc}</div>
+    ${pricePopup}
+    <a class="pop-route" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      Rota no Google Maps
+    </a>`;
+  m.bindPopup(popupHtml);
+  markers[item.id] = m;
+  latlngs.push([item.lat, item.lon]);
+});
+const initialBounds = L.latLngBounds(latlngs);
+map.fitBounds(initialBounds, { padding:[26,26] });
+
+/* ===================== controles do mapa ===================== */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+let userMarker = null;
+document.getElementById('locateBtn').addEventListener('click', ()=>{
+  const btn = document.getElementById('locateBtn');
+  if(!navigator.geolocation){ showToast('Geolocalização não é suportada neste navegador'); return; }
+  btn.classList.add('busy');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    btn.classList.remove('busy');
+    const { latitude, longitude } = pos.coords;
+    if(userMarker) map.removeLayer(userMarker);
+    userMarker = L.circleMarker([latitude, longitude], {
+      radius:8, color:'#ffffff', weight:2, fillColor:'#4285F4', fillOpacity:1
+    }).addTo(map);
+    map.setView([latitude, longitude], 17);
+  }, err=>{
+    btn.classList.remove('busy');
+    showToast('Não foi possível obter sua localização');
+  }, { enableHighAccuracy:true, timeout:10000 });
+});
+
+document.getElementById('resetViewBtn').addEventListener('click', ()=>{
+  map.fitBounds(initialBounds, { padding:[26,26] });
+});
+
+/* ===================== init ===================== */
+buildChips();
+renderCards();
+</script>
+</body>
+</html>
