@@ -91,6 +91,11 @@
     color:var(--c-rest); border:1px solid rgba(226,100,92,.35); background:rgba(226,100,92,.08);
     padding:2px 8px; border-radius:100px; white-space:nowrap;
   }
+  .badge{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; font-weight:600;
+    color:var(--ink-faint); border:1px solid var(--line-strong); background:var(--bg-elev-2);
+    padding:2px 8px; border-radius:100px; white-space:nowrap;
+  }
   .addr{ font-size:12px; color:var(--ink-faint); margin-bottom:4px; }
   .blurb{ font-size:13px; line-height:1.5; color:var(--ink-dim); margin:0; }
 
@@ -121,12 +126,27 @@
     <a class="back" href="index.html">← viagens</a>
     <div class="eyebrow">Roteiro de Viagem</div>
     <h1>São Paulo, dia a dia</h1>
-    <p>Chegada terça-feira, 15/09, 16h35 (Congonhas) — partida domingo, 20/09, 14h00 (Congonhas). 9 pontos e 4 restaurantes distribuídos em 4 dias inteiros, por proximidade e horário de funcionamento.</p>
+    <p>Chegada terça-feira, 15/09, 16h35 (Congonhas) — partida domingo, 20/09, 14h00 (Congonhas). Pontos turísticos e restaurantes, com três reservas já feitas pela família.</p>
     <div class="legend">
       <span><span class="dot" style="background:var(--select)"></span>Pontos turísticos</span>
       <span><span class="dot" style="background:var(--c-rest)"></span>Restaurantes</span>
     </div>
   </header>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Terça-feira, 15/09</h2>
+      <span class="region">Chegada</span>
+    </div>
+    <div class="stop">
+      <div class="time">16:35</div>
+      <div class="content">
+        <div class="name-row"><h3>Chegada em São Paulo</h3></div>
+        <div class="addr">Aeroporto de Congonhas (CGH)</div>
+        <p class="blurb">Noite livre — nenhum restaurante fica reservado aqui. É o único horário sobrando se quiserem tentar o Maní mesmo assim, mas com ~12 dias de antecedência a reserva pode não sair.</p>
+      </div>
+    </div>
+  </div>
 
   <div class="day">
     <div class="day-head">
@@ -237,25 +257,43 @@
         <p class="blurb">~15–20 min de carro a partir de Oscar Freire. Lojas e alimentação abertas até as 22h.</p>
       </div>
     </div>
+
+    <div class="stop rest">
+      <div class="time">19:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Jantar — Paul's Boutique Pizza</h3><span class="badge">reservado</span></div>
+        <div class="addr">Itaim Bibi</div>
+        <p class="blurb">Pizza estilo Nova York. Reserva feita pela irmã do Jonas.</p>
+      </div>
+    </div>
   </div>
 
   <div class="day">
     <div class="day-head">
       <h2>Sábado, 19/09</h2>
-      <span class="region">Vila Madalena / Pinheiros</span>
+      <span class="region">Vila Madalena / Pinheiros + Bom Retiro</span>
     </div>
 
     <div class="stop">
-      <div class="time">10:00</div>
+      <div class="time">manhã</div>
       <div class="content">
         <div class="name-row"><h3>Feira Benedito Calixto</h3></div>
         <div class="addr">Praça Benedito Calixto — Pinheiros</div>
-        <p class="blurb">Só acontece aos sábados, das 9h às 17h/19h — por isso ficou reservada para o único sábado da viagem. Música ao vivo (chorinho) costuma rolar das 14h30 às 18h30.</p>
+        <p class="blurb">Só acontece aos sábados, das 9h às 17h/19h. Música ao vivo (chorinho) costuma rolar das 14h30 às 18h30.</p>
+      </div>
+    </div>
+
+    <div class="stop rest">
+      <div class="time">meio-dia</div>
+      <div class="content">
+        <div class="name-row"><h3>Almoço — Shoshana Delishop</h3><span class="badge">reservado</span></div>
+        <div class="addr">Bom Retiro</div>
+        <p class="blurb">Comida judaica. Fica a ~11 km da Feira Benedito Calixto e do Beco do Batman — vale checar o horário da reserva pra decidir se compensa ir antes ou depois da feira, é bastante deslocamento.</p>
       </div>
     </div>
 
     <div class="stop">
-      <div class="time">15:00</div>
+      <div class="time">tarde</div>
       <div class="content">
         <div class="name-row"><h3>Beco do Batman</h3></div>
         <div class="addr">Vila Madalena</div>
@@ -264,11 +302,11 @@
     </div>
 
     <div class="stop rest">
-      <div class="time">19:30</div>
+      <div class="time">noite</div>
       <div class="content">
-        <div class="name-row"><h3>Jantar de despedida — Maní</h3><span class="price">R$ 250–700</span></div>
-        <div class="addr">Jardins, ~900m da Feira Benedito Calixto</div>
-        <p class="blurb">Restaurante com estrela Michelin da chef Helena Rizzo. O mais especial (e caro) dos quatro, por isso fechou a viagem — reserve com bastante antecedência.</p>
+        <div class="name-row"><h3>Jantar — Ici Bistrô</h3><span class="badge">reservado</span></div>
+        <div class="addr">Região da Consolação / Higienópolis</div>
+        <p class="blurb">Clássicos da cozinha francesa.</p>
       </div>
     </div>
   </div>
@@ -276,10 +314,11 @@
   <div class="notes">
     <h2>Observações gerais</h2>
     <ul>
-      <li>Os dias <b>15/09</b> (chegada às 16h35) e <b>20/09</b> (partida às 14h00) ficaram fora do roteiro, por serem dias parciais.</li>
+      <li>O <b>Maní</b> ficou de fora do roteiro. Com o Shoshana e o Ici Bistrô ocupando o sábado, não sobrou um dia próximo o suficiente das outras atrações — e a reserva é difícil de conseguir com pouca antecedência (viagem em ~12 dias). A única noite livre, se quiserem tentar mesmo assim, é terça-feira 15/09.</li>
+      <li>O dia <b>20/09</b> (partida às 14h00) ficou fora do roteiro, por ser dia parcial.</li>
       <li><b>Museu da Língua Portuguesa</b> e <b>Farol Santander</b>: comprar ingresso antecipado pelo site oficial evita fila.</li>
       <li><b>Cidade Matarazzo</b>: reservar restaurante com antecedência se quiser almoçar ou jantar por lá.</li>
-      <li>Os quatro restaurantes foram encaixados por proximidade com os pontos já visitados naquele dia — vale reservar mesa com antecedência em todos, especialmente no <b>Maní</b>.</li>
+      <li>O <b>sábado</b> tem bastante deslocamento (Bom Retiro fica longe de Pinheiros/Vila Madalena) — vale organizar a ordem do dia em função do horário das reservas do Shoshana e do Ici Bistrô.</li>
       <li>Horários de funcionamento estão sujeitos a alteração — vale confirmar no site oficial de cada atração antes da viagem.</li>
     </ul>
   </div>
