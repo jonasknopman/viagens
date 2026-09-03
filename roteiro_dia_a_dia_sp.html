@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Roteiro São Paulo — 16 a 19/09</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #17181b;
+    --bg-elev: #201f22;
+    --bg-elev-2: #29282c;
+    --ink: #f2efe9;
+    --ink-dim: #aeaba3;
+    --ink-faint: #7c7a76;
+    --line: rgba(242,239,233,.10);
+    --line-strong: rgba(242,239,233,.18);
+    --select: #ffd166;
+    --select-ink: #201a06;
+    --c-rest: #e2645c;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,209,102,.05), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: 60px;
+  }
+  .wrap{ max-width:720px; margin:0 auto; padding:0 18px; }
+
+  h1,h2,h3{ font-family:'Space Grotesk','Inter',sans-serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  header{ padding:36px 0 20px; }
+  .back{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint);
+    text-decoration:none; display:inline-block; margin-bottom:18px;
+  }
+  .back:hover{ color:var(--ink); }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; letter-spacing:.16em;
+    color:var(--select); text-transform:uppercase;
+    display:flex; align-items:center; gap:10px; margin-bottom:14px;
+  }
+  .eyebrow::before{ content:""; width:22px; height:1px; background:var(--select); display:inline-block; }
+  h1{ font-size: clamp(26px, 5vw, 36px); line-height:1.15; font-weight:700; margin:0 0 10px; }
+  header p{ font-size:14px; line-height:1.55; color:var(--ink-dim); margin:0; }
+
+  .legend{
+    display:flex; gap:18px; margin:20px 0 6px; flex-wrap:wrap;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint);
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend .dot{ width:8px; height:8px; border-radius:50%; }
+
+  .day{ margin-top:38px; }
+  .day-head{
+    display:flex; align-items:baseline; gap:10px; margin-bottom:14px;
+    border-bottom:1px solid var(--line-strong); padding-bottom:10px;
+  }
+  .day-head h2{ font-size:19px; font-weight:600; margin:0; }
+  .day-head .region{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint);
+  }
+
+  .stop{
+    display:flex; gap:16px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .stop:last-child{ border-bottom:none; }
+  .stop .time{
+    flex:none; width:52px;
+    font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:600;
+    color:var(--select); padding-top:2px;
+  }
+  .stop.rest .time{ color:var(--c-rest); }
+  .stop .content{ flex:1; min-width:0; }
+  .stop .name-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:3px; }
+  .stop h3{ font-size:15.5px; font-weight:600; margin:0; }
+  .price{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; font-weight:600;
+    color:var(--c-rest); border:1px solid rgba(226,100,92,.35); background:rgba(226,100,92,.08);
+    padding:2px 8px; border-radius:100px; white-space:nowrap;
+  }
+  .addr{ font-size:12px; color:var(--ink-faint); margin-bottom:4px; }
+  .blurb{ font-size:13px; line-height:1.5; color:var(--ink-dim); margin:0; }
+
+  .notes{
+    margin-top:44px; background:var(--bg-elev); border:1px solid var(--line);
+    border-radius: var(--radius); padding:22px 22px 20px;
+  }
+  .notes h2{ font-size:17px; margin:0 0 14px; }
+  .notes ul{ margin:0; padding-left:18px; }
+  .notes li{ font-size:13.5px; line-height:1.6; color:var(--ink-dim); margin-bottom:10px; }
+  .notes li:last-child{ margin-bottom:0; }
+  .notes li b{ color:var(--ink); font-weight:600; }
+
+  footer{
+    margin-top:36px; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    color:var(--ink-faint); text-align:center;
+  }
+
+  @media print{
+    body{ background:#fff; color:#111; }
+    .back{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="index.html">← viagens</a>
+    <div class="eyebrow">Roteiro de Viagem</div>
+    <h1>São Paulo, dia a dia</h1>
+    <p>Chegada terça-feira, 15/09, 16h35 (Congonhas) — partida domingo, 20/09, 14h00 (Congonhas). 9 pontos e 4 restaurantes distribuídos em 4 dias inteiros, por proximidade e horário de funcionamento.</p>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--select)"></span>Pontos turísticos</span>
+      <span><span class="dot" style="background:var(--c-rest)"></span>Restaurantes</span>
+    </div>
+  </header>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Quarta-feira, 16/09</h2>
+      <span class="region">Centro Histórico / Liberdade</span>
+    </div>
+
+    <div class="stop">
+      <div class="time">09:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Museu da Língua Portuguesa</h3></div>
+        <div class="addr">Praça da Luz, s/nº — Estação da Luz</div>
+        <p class="blurb">Fecha às segundas-feiras. Entrada permitida até 16h30 (permanência até 18h) — vai primeiro por causa desse limite. Ingresso antecipado online recomendado.</p>
+      </div>
+    </div>
+
+    <div class="stop">
+      <div class="time">13:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Farol Santander</h3></div>
+        <div class="addr">Rua João Brícola, 24 — Centro</div>
+        <p class="blurb">A ~1,5 km do museu (uma estação de metrô, Luz → São Bento). Terça a domingo, das 9h às 20h (entrada até 19h). Ingresso antecipado recomendado.</p>
+      </div>
+    </div>
+
+    <div class="stop rest">
+      <div class="time">19:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Jantar — Restaurante Kazu</h3><span class="price">R$ 80–120</span></div>
+        <div class="addr">Liberdade</div>
+        <p class="blurb">Japonês tradicional, a ~1,4 km do Farol Santander — bom fechamento pro dia, na mesma região central.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Quinta-feira, 17/09</h2>
+      <span class="region">Paulista / Jardins</span>
+    </div>
+
+    <div class="stop">
+      <div class="time">10:00</div>
+      <div class="content">
+        <div class="name-row"><h3>Japan House São Paulo</h3></div>
+        <div class="addr">Av. Paulista, 52</div>
+        <p class="blurb">Fecha às segundas. Terça a sexta, das 10h às 18h.</p>
+      </div>
+    </div>
+
+    <div class="stop">
+      <div class="time">12:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Cidade Matarazzo</h3></div>
+        <div class="addr">~200m da Av. Paulista</div>
+        <p class="blurb">Complexo aberto ao público, sem horário fixo. Bom para almoçar e passear pelos jardins — reserve com antecedência se quiser comer num dos restaurantes (Mata Città, Le Jardin etc.).</p>
+      </div>
+    </div>
+
+    <div class="stop">
+      <div class="time">16:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Museu Judaico</h3></div>
+        <div class="addr">Rua Martinho Prado, 128 — Bela Vista</div>
+        <p class="blurb">Terça a domingo, das 10h às 18h/19h; nas quintas-feiras funciona até 21h — por isso fica pro fim do dia, sem pressa.</p>
+      </div>
+    </div>
+
+    <div class="stop rest">
+      <div class="time">19:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Jantar — Sal Gastronomia</h3><span class="price">R$ 150–220</span></div>
+        <div class="addr">Jardins</div>
+        <p class="blurb">Cozinha contemporânea do chef Henrique Fogaça, a ~10 min do Museu Judaico. Vale reservar com antecedência.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Sexta-feira, 18/09</h2>
+      <span class="region">Compras</span>
+    </div>
+
+    <div class="stop">
+      <div class="time">10:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Oscar Freire (Galeria Melissa)</h3></div>
+        <div class="addr">Rua Oscar Freire, 827</div>
+        <p class="blurb">Segunda a sexta, das 10h às 19h/20h. Melhor ir de manhã, antes do movimento da rua aumentar.</p>
+      </div>
+    </div>
+
+    <div class="stop rest">
+      <div class="time">12:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Almoço — Arturito</h3><span class="price">R$ 150–250</span></div>
+        <div class="addr">Jardins</div>
+        <p class="blurb">Cozinha ítalo-mediterrânea, a uma quadra de Oscar Freire — menu executivo do almoço sai mais em conta. Reserve com antecedência, costuma ter fila.</p>
+      </div>
+    </div>
+
+    <div class="stop">
+      <div class="time">15:00</div>
+      <div class="content">
+        <div class="name-row"><h3>JK Iguatemi</h3></div>
+        <div class="addr">Av. Pres. Juscelino Kubitschek, 2041 — Vila Olímpia</div>
+        <p class="blurb">~15–20 min de carro a partir de Oscar Freire. Lojas e alimentação abertas até as 22h.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Sábado, 19/09</h2>
+      <span class="region">Vila Madalena / Pinheiros</span>
+    </div>
+
+    <div class="stop">
+      <div class="time">10:00</div>
+      <div class="content">
+        <div class="name-row"><h3>Feira Benedito Calixto</h3></div>
+        <div class="addr">Praça Benedito Calixto — Pinheiros</div>
+        <p class="blurb">Só acontece aos sábados, das 9h às 17h/19h — por isso ficou reservada para o único sábado da viagem. Música ao vivo (chorinho) costuma rolar das 14h30 às 18h30.</p>
+      </div>
+    </div>
+
+    <div class="stop">
+      <div class="time">15:00</div>
+      <div class="content">
+        <div class="name-row"><h3>Beco do Batman</h3></div>
+        <div class="addr">Vila Madalena</div>
+        <p class="blurb">A ~600m da feira — dá pra ir a pé. Ao ar livre, sem horário fixo. Boa luz de tarde para fotos.</p>
+      </div>
+    </div>
+
+    <div class="stop rest">
+      <div class="time">19:30</div>
+      <div class="content">
+        <div class="name-row"><h3>Jantar de despedida — Maní</h3><span class="price">R$ 250–700</span></div>
+        <div class="addr">Jardins, ~900m da Feira Benedito Calixto</div>
+        <p class="blurb">Restaurante com estrela Michelin da chef Helena Rizzo. O mais especial (e caro) dos quatro, por isso fechou a viagem — reserve com bastante antecedência.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h2>Observações gerais</h2>
+    <ul>
+      <li>Os dias <b>15/09</b> (chegada às 16h35) e <b>20/09</b> (partida às 14h00) ficaram fora do roteiro, por serem dias parciais.</li>
+      <li><b>Museu da Língua Portuguesa</b> e <b>Farol Santander</b>: comprar ingresso antecipado pelo site oficial evita fila.</li>
+      <li><b>Cidade Matarazzo</b>: reservar restaurante com antecedência se quiser almoçar ou jantar por lá.</li>
+      <li>Os quatro restaurantes foram encaixados por proximidade com os pontos já visitados naquele dia — vale reservar mesa com antecedência em todos, especialmente no <b>Maní</b>.</li>
+      <li>Horários de funcionamento estão sujeitos a alteração — vale confirmar no site oficial de cada atração antes da viagem.</li>
+    </ul>
+  </div>
+
+  <footer>jonasknopman.github.io/viagens</footer>
+</div>
+</body>
+</html>
