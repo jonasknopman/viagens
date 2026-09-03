@@ -21,6 +21,8 @@
     --select-ink: #201a06;
     --c-sp: #78a9cc;
     --c-foz: #6fbb8d;
+    --c-escolha-pontos: #e0a83a;
+    --c-escolha-rest: #e2645c;
     --radius: 18px;
   }
   *{ box-sizing:border-box; }
@@ -35,7 +37,7 @@
     -webkit-font-smoothing:antialiased;
     display:flex; align-items:center;
   }
-  .wrap{ max-width:760px; margin:0 auto; padding:48px 20px; width:100%; }
+  .wrap{ max-width:840px; margin:0 auto; padding:48px 20px; width:100%; }
 
   .eyebrow{
     font-family:'IBM Plex Mono', monospace;
@@ -54,6 +56,13 @@
     font-size:14.5px; line-height:1.55; color:var(--ink-dim);
     max-width:52ch; margin:0 0 34px;
   }
+
+  .section-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-faint);
+    margin:30px 0 12px;
+  }
+  .section-label:first-of-type{ margin-top:0; }
 
   .cards{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   @media (max-width:620px){ .cards{ grid-template-columns:1fr; } }
@@ -101,8 +110,9 @@
 <div class="wrap">
   <div class="eyebrow">Guias de Viagem</div>
   <h1>Pra onde vamos?</h1>
-  <p class="lead">Dois roteiros interativos — mapa, lista de pontos por categoria e rota direta pelo Google Maps.</p>
+  <p class="lead">Roteiros interativos — mapa, lista de pontos por categoria e rota direta pelo Google Maps — e as ferramentas de escolha a dois.</p>
 
+  <div class="section-label">Guias completos</div>
   <div class="cards">
     <a class="card" href="roteiro_sao_paulo_v2.html" style="--accent:var(--c-sp)">
       <span class="tag">73 pontos</span>
@@ -118,6 +128,27 @@
       <h2>Foz do Iguaçu</h2>
       <p>Cataratas, Itaipu, compras na fronteira, hospedagem e restaurantes.</p>
       <span class="go">Abrir roteiro
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+  </div>
+
+  <div class="section-label">Escolha em conjunto</div>
+  <div class="cards">
+    <a class="card" href="escolhe_pontos_sao_paulo.html" style="--accent:var(--c-escolha-pontos)">
+      <span class="tag">52 pontos</span>
+      <h2>Escolher pontos — SP</h2>
+      <p>Marquem juntos o que querem visitar em São Paulo; a seleção fica salva e sincronizada.</p>
+      <span class="go">Abrir seleção
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </a>
+
+    <a class="card" href="escolhe_restaurantes_sao_paulo.html" style="--accent:var(--c-escolha-rest)">
+      <span class="tag">17 restaurantes</span>
+      <h2>Escolher restaurantes — SP</h2>
+      <p>Marquem juntos onde querem comer, com preço estimado por pessoa em cada um.</p>
+      <span class="go">Abrir seleção
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </span>
     </a>
