@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>São Paulo — escolha os pontos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg: #17181b;
+    --bg-elev: #201f22;
+    --bg-elev-2: #29282c;
+    --ink: #f2efe9;
+    --ink-dim: #aeaba3;
+    --ink-faint: #7c7a76;
+    --line: rgba(242,239,233,.10);
+    --line-strong: rgba(242,239,233,.18);
+    --select: #ffd166;
+    --select-ink: #201a06;
+
+    --c-museus: #78a9cc;
+    --c-parques: #6fbb8d;
+    --c-arquitetura: #e0a83a;
+    --c-religioso: #d67a55;
+    --c-compras: #ac93d1;
+    --c-passeios: #ef9463;
+    --c-hospedagem: #93a9b6;
+
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-tap-highlight-color: transparent; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,209,102,.05), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: 90px;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 18px; }
+
+  h1,h2,h3, .disp{ font-family:'Space Grotesk', 'Inter', sans-serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* ---------- header ---------- */
+  header{ padding:34px 0 18px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.16em;
+    color: var(--select);
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px; height:1px; background: var(--select);
+    display:inline-block;
+  }
+  header h1{
+    font-size: clamp(26px, 4.6vw, 38px);
+    line-height:1.12;
+    font-weight:700;
+    margin:0 0 12px;
+    max-width: 15ch;
+  }
+  header p{
+    font-size:14.5px;
+    line-height:1.55;
+    color:var(--ink-dim);
+    max-width:52ch;
+    margin:0;
+  }
+
+  /* ---------- map ---------- */
+  #map{
+    height: 340px;
+    border-radius: var(--radius);
+    margin-top:22px;
+    border:1px solid var(--line-strong);
+    background:var(--bg-elev);
+  }
+  @media (max-width:640px){ #map{ height:250px; } }
+  .leaflet-popup-content-wrapper{
+    background:var(--bg-elev-2); color:var(--ink);
+    border-radius:12px; border:1px solid var(--line-strong);
+  }
+  .leaflet-popup-tip{ background:var(--bg-elev-2); }
+  .leaflet-popup-content{ margin:12px 14px; font-family:'Inter',sans-serif; }
+  .pop-cat{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; opacity:.75; margin-bottom:4px;}
+  .pop-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px; margin-bottom:6px; }
+  .pop-desc{ font-size:12.5px; line-height:1.45; color:var(--ink-dim); margin-bottom:10px; }
+  .pop-actions{ display:flex; gap:8px; align-items:stretch; }
+  .pop-btn{
+    flex:1;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em;
+    border:1px solid var(--line-strong); background:transparent; color:var(--ink);
+    padding:7px 12px; border-radius:8px; cursor:pointer;
+  }
+  .pop-btn.on{ background:var(--select); color:var(--select-ink); border-color:var(--select); font-weight:600; }
+  .pop-route{
+    flex:none; width:34px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line-strong); border-radius:8px;
+    color:var(--ink-dim); text-decoration:none; transition: all .15s ease;
+  }
+  .pop-route:hover{ background:var(--bg-elev-2); color:var(--ink); border-color:var(--ink-faint); }
+  .pop-route svg{ width:14px; height:14px; }
+  .leaflet-container a.leaflet-popup-close-button{ color:var(--ink-dim); }
+  .mk{
+    width:16px; height:16px; border-radius:50%;
+    border:2px solid rgba(23,24,27,.75);
+    box-shadow:0 0 0 2px rgba(242,239,233,.25);
+  }
+  .mk.on{ width:20px; height:20px; box-shadow:0 0 0 3px var(--select); }
+
+  /* ---------- controls (sticky) ---------- */
+  .controls{
+    position:sticky; top:0; z-index:20;
+    background: linear-gradient(var(--bg) 78%, transparent);
+    padding:16px 0 10px;
+    margin-top: 4px;
+  }
+  .search{
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg-elev); border:1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding:10px 14px; margin-bottom:12px;
+  }
+  .search svg{ flex:none; opacity:.55; }
+  .search input{
+    background:none; border:none; outline:none; color:var(--ink);
+    font-family:'Inter',sans-serif; font-size:14.5px; width:100%;
+  }
+  .search input::placeholder{ color:var(--ink-faint); }
+
+  .chips{
+    display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;
+    scrollbar-width:none;
+  }
+  .chips::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:none;
+    display:flex; align-items:center; gap:7px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px; letter-spacing:.02em;
+    color:var(--ink-dim);
+    background:var(--bg-elev);
+    border:1px solid var(--line-strong);
+    padding:8px 13px 8px 10px;
+    border-radius:100px;
+    cursor:pointer;
+    user-select:none;
+    transition: border-color .15s, color .15s, background .15s;
+    white-space:nowrap;
+  }
+  .chip .dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .chip .count{ opacity:.6; }
+  .chip.active{ color:var(--ink); background:var(--bg-elev-2); border-color:var(--line-strong); }
+  .chip.active .dot{ box-shadow:0 0 0 3px currentColor; }
+  .chip:hover{ border-color: var(--ink-faint); }
+
+  /* ---------- grid / cards ---------- */
+  #grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+    gap:12px;
+    margin: 14px 0 10px;
+  }
+  .card{
+    position:relative;
+    background:var(--bg-elev);
+    border:1px solid var(--line);
+    border-left:3px solid var(--cat-color, var(--line));
+    border-radius: var(--radius-sm);
+    padding:14px 14px 15px;
+    cursor:pointer;
+    transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    animation: rise .35s ease both;
+  }
+  .card:hover{ background:var(--bg-elev-2); }
+  .card:active{ transform: scale(.985); }
+  .card.selected{
+    border-color: var(--select);
+    background: linear-gradient(180deg, rgba(255,209,102,.09), rgba(255,209,102,.02));
+  }
+  .card-top{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:10px; margin-bottom:8px;
+  }
+  .cat-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--cat-color);
+  }
+  .cat-tag svg{ width:13px; height:13px; }
+  .card-actions{ display:flex; align-items:center; gap:8px; flex:none; }
+  .route-btn{
+    width:22px; height:22px; border-radius:50%;
+    border:1.5px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink-dim); text-decoration:none;
+    transition: all .15s ease;
+  }
+  .route-btn svg{ width:12px; height:12px; }
+  .route-btn:hover{ background:var(--bg-elev-2); border-color:var(--ink-faint); color:var(--ink); }
+  .check{
+    flex:none;
+    width:22px; height:22px; border-radius:50%;
+    border:1.5px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center;
+    transition: all .15s ease;
+  }
+  .card.selected .check{
+    background:var(--select); border-color:var(--select);
+  }
+  .check svg{ width:12px; height:12px; opacity:0; transition:opacity .1s; color:var(--select-ink); }
+  .card.selected .check svg{ opacity:1; }
+  .card h3{
+    font-size:16px; font-weight:600; line-height:1.28;
+    margin:0 0 6px;
+  }
+  .card p{
+    font-size:13px; line-height:1.5; color:var(--ink-dim);
+    margin:0;
+  }
+  .empty{
+    grid-column:1/-1; text-align:center; padding:50px 20px; color:var(--ink-faint);
+    font-size:13.5px;
+  }
+
+  @keyframes rise{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){ .card{ animation:none; } }
+
+  /* ---------- bottom bar ---------- */
+  .bar{
+    position:fixed; left:0; right:0; bottom:16px;
+    display:flex; justify-content:center; z-index:30;
+    pointer-events:none;
+  }
+  .bar-inner{
+    pointer-events:auto;
+    display:flex; align-items:center; gap:14px;
+    background:#0d0d0e;
+    border:1px solid rgba(255,209,102,.35);
+    border-radius:100px;
+    padding:9px 9px 9px 18px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.45);
+  }
+  .bar-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px; color:var(--select);
+    white-space:nowrap;
+  }
+  .bar-count b{ color:var(--ink); font-size:14px; }
+  .bar button.view{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    background:var(--select); color:var(--select-ink);
+    border:none; border-radius:100px; padding:10px 18px; cursor:pointer;
+  }
+
+  /* ---------- sheet / modal ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(10,10,11,.6);
+    backdrop-filter: blur(2px);
+    display:none; align-items:flex-end; justify-content:center;
+    z-index:40;
+  }
+  .overlay.open{ display:flex; }
+  @media (min-width:640px){ .overlay{ align-items:center; } }
+  .sheet{
+    width:100%; max-width:560px;
+    max-height:82vh;
+    background:var(--bg-elev);
+    border:1px solid var(--line-strong);
+    border-bottom:none;
+    border-radius:20px 20px 0 0;
+    display:flex; flex-direction:column;
+    animation: slideup .22s ease;
+  }
+  @media (min-width:640px){ .sheet{ border-radius:20px; border-bottom:1px solid var(--line-strong); } }
+  @keyframes slideup{ from{ transform:translateY(24px); opacity:.4; } to{ transform:none; opacity:1; } }
+  .sheet-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 20px 12px; border-bottom:1px solid var(--line);
+  }
+  .sheet-head h2{ font-size:18px; margin:0; }
+  .sheet-head button{
+    background:none; border:none; color:var(--ink-dim); cursor:pointer; padding:6px;
+  }
+  .sheet-list{ overflow-y:auto; padding:8px 12px; }
+  .sheet-item{
+    display:flex; align-items:center; gap:12px;
+    padding:11px 10px; border-radius:10px;
+  }
+  .sheet-item:hover{ background:var(--bg-elev-2); }
+  .sheet-dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .sheet-item .name{ flex:1; font-size:14px; }
+  .sheet-item .rm{
+    background:none; border:none; color:var(--ink-faint); cursor:pointer;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:4px 8px;
+  }
+  .sheet-item .rm:hover{ color:var(--ink); }
+  .sheet-empty{ padding:40px 20px; text-align:center; color:var(--ink-faint); font-size:13.5px; }
+  .sheet-foot{
+    display:flex; gap:8px; padding:14px 20px calc(18px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line); flex-wrap:wrap;
+  }
+  .sheet-foot button{
+    flex:1; min-width:120px;
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    border-radius:10px; padding:11px 12px; cursor:pointer; border:1px solid var(--line-strong);
+    background:var(--bg-elev-2); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; gap:7px;
+  }
+  .sheet-foot button.primary{ background:var(--select); color:var(--select-ink); border-color:var(--select); }
+  .sheet-foot button.ghost{ flex:none; min-width:0; background:transparent; color:var(--ink-faint); }
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(8px);
+    background:var(--ink); color:var(--bg); font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    padding:10px 16px; border-radius:100px; z-index:50; opacity:0; pointer-events:none;
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .sync-info{
+    margin-top:12px; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    color:var(--ink-faint); display:none;
+  }
+  .sync-dot{
+    width:7px; height:7px; border-radius:50%; flex:none;
+    background:var(--ink-faint); transition:background .2s;
+  }
+  .sync-dot.ok{ background:#6fbb8d; }
+  .sync-dot.busy{ background:var(--select); animation:pulse 1s infinite; }
+  .sync-dot.err{ background:#d67a55; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Roteiro · São Paulo</div>
+    <h1>Escolha os pontos que quer conhecer</h1>
+    <p>52 lugares da cidade — sem os restaurantes e sem os endereços de sempre. Toque nos que te interessam; dá pra mudar de ideia a qualquer momento. Tudo fica salvo automaticamente.</p>
+    <p class="sync-info" id="syncInfo"></p>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="Buscar por nome…" />
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="grid"></div>
+</div>
+
+<div class="bar">
+  <div class="bar-inner">
+    <span class="sync-dot" id="syncDot" title="Sincronizando…"></span>
+    <div class="bar-count"><b id="selCount">0</b> selecionados</div>
+    <button class="view" id="openSheetBtn">Ver lista</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Seus pontos</h2>
+      <button id="closeSheetBtn" aria-label="Fechar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sheet-list" id="sheetList"></div>
+    <div class="sheet-foot">
+      <button id="copyBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        Copiar lista
+      </button>
+      <button id="waBtn" class="primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.4.1-.6l.4-.5c.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4L10 8.3c-.2-.4-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1.1 2.7c.1.2 1.9 2.9 4.6 4 .6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4Z"/><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></svg>
+        WhatsApp
+      </button>
+      <button id="clearBtn" class="ghost">Limpar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Lista copiada</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===================== sincronização (Firebase Realtime Database) =====================
+   1. Crie um projeto gratuito em https://console.firebase.google.com (plano Spark, sem cartão).
+   2. No menu lateral: Realtime Database → Criar banco de dados → modo de teste.
+   3. Copie a "Database URL" (algo como https://roteiro-sp-xxxxx-default-rtdb.firebaseio.com)
+      e cole abaixo, no lugar de COLE_AQUI_A_URL_DO_SEU_FIREBASE.
+   Sem isso preenchido, o app funciona normalmente, só que sem salvar entre visitas. */
+const FIREBASE_DB_URL = "https://saopaulo-5c26c-default-rtdb.firebaseio.com";
+const SYNC_PATH = "/roteiro_sp/selecao.json";
+const syncEnabled = () => FIREBASE_DB_URL && !FIREBASE_DB_URL.includes("COLE_AQUI");
+
+/* ===================== dados ===================== */
+const CATS = {
+  museus:      { label:"Museus e Cultura",        color:"var(--c-museus)",      hex:"#78a9cc",
+    icon:'<path d="M3 21h18"/><path d="M4 21V10.5"/><path d="M8.5 21V10.5"/><path d="M13 21V10.5"/><path d="M17.5 21V10.5"/><path d="M2.5 10.5 12 4l9.5 6.5"/>' },
+  parques:     { label:"Parques e Natureza",       color:"var(--c-parques)",     hex:"#6fbb8d",
+    icon:'<circle cx="12" cy="10" r="6"/><path d="M12 16v5"/>' },
+  arquitetura: { label:"Arquitetura e Mirantes",   color:"var(--c-arquitetura)", hex:"#e0a83a",
+    icon:'<path d="M4 21V9l4.5-3.2V21"/><path d="M13 21V5l4.5-2.2V21"/><path d="M3 21h18"/>' },
+  religioso:   { label:"Religioso e Histórico",    color:"var(--c-religioso)",   hex:"#d67a55",
+    icon:'<path d="M12 3v3.2"/><path d="M7.2 9.5a4.8 4.8 0 0 1 9.6 0V13H7.2z"/><path d="M5 21v-8h14v8"/><path d="M3 21h18"/>' },
+  compras:     { label:"Compras",                  color:"var(--c-compras)",     hex:"#ac93d1",
+    icon:'<path d="M6.5 8h11l-1 12.5h-9L6.5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>' },
+  passeios:    { label:"Passeios e Bairros",        color:"var(--c-passeios)",    hex:"#ef9463",
+    icon:'<path d="M12 21s7-7.4 7-12.2A7 7 0 0 0 5 8.8C5 13.6 12 21 12 21Z"/><circle cx="12" cy="8.6" r="2.3"/>' },
+  hospedagem:  { label:"Hospedagem",                color:"var(--c-hospedagem)",  hex:"#93a9b6",
+    icon:'<path d="M3 19v-6.5A2.5 2.5 0 0 1 5.5 10H16a3 3 0 0 1 3 3v6"/><path d="M3 16h16"/><path d="M3 21v-2"/><path d="M19 21v-2"/><circle cx="7.5" cy="12.2" r="1.1"/>' }
+};
+
+const DATA = [
+  {id:1, cat:"parques", name:"Pavilhão Japonês", lat:-23.5859989, lon:-46.6619324, desc:"Réplica de um palácio tradicional japonês, com jardim e lago de carpas dentro do Parque do Ibirapuera. Um recanto de calma no meio da cidade."},
+  {id:2, cat:"parques", name:"Jardim Botânico de São Paulo", lat:-23.641624, lon:-46.6234092, desc:"Ampla área de Mata Atlântica preservada, com trilhas, viveiro de orquídeas e um museu botânico, na zona sul da cidade."},
+  {id:3, cat:"museus", name:"Teatro Renault", lat:-23.5542941, lon:-46.6384966, desc:"Um dos grandes teatros da cidade para musicais e espetáculos, na Rua Augusta — o nome muda de tempos em tempos conforme o patrocinador."},
+  {id:4, cat:"museus", name:"Museu da Imagem e do Som (MIS)", lat:-23.5727597, lon:-46.6761582, desc:"Dedicado a cinema, fotografia e música, com exposições sobre a cultura brasileira, perto do Parque Ibirapuera."},
+  {id:5, cat:"passeios", name:"Feira Benedito Calixto", lat:-23.5583923, lon:-46.6807078, desc:"Feira de antiguidades, arte e música ao vivo aos sábados, na Vila Madalena — clima descontraído, ótima para passear sem pressa."},
+  {id:6, cat:"parques", name:"Zoológico de São Paulo", lat:-23.6508432, lon:-46.6204215, desc:"Um dos maiores zoológicos do Brasil, em meio à mata nativa, com centenas de espécies — passeio para o dia inteiro."},
+  {id:7, cat:"parques", name:"Aquário de SP", lat:-23.5934539, lon:-46.6141541, desc:"Aquário temático com tubarões, pinguins e réplicas de ambientes como o Pantanal e a Amazônia, na Vila Guilherme."},
+  {id:8, cat:"parques", name:"Parque Villa-Lobos", lat:-23.5457827, lon:-46.720578, desc:"Um dos parques mais completos da cidade, com pistas de caminhada e ciclismo, museu do Villa-Lobos e boa estrutura para piquenique."},
+  {id:9, cat:"arquitetura", name:"Edifício Itália", lat:-23.545404, lon:-46.6436776, desc:"Um dos prédios mais altos do centro, com terraço panorâmico no último andar para ver a cidade de cima, ao pôr do sol."},
+  {id:10, cat:"arquitetura", name:"Edifício Martinelli", lat:-23.5456156, lon:-46.634976, desc:"O primeiro arranha-céu de São Paulo, dos anos 1920, com terraço aberto à visitação e vista para o centro histórico."},
+  {id:11, cat:"parques", name:"Parque Estadual da Cantareira – Pedra Grande", lat:-23.4544266, lon:-46.6359302, desc:"A maior floresta urbana do mundo. A trilha até a Pedra Grande leva a um mirante com vista panorâmica de toda a cidade."},
+  {id:12, cat:"religioso", name:"Templo de Salomão", lat:-23.53763, lon:-46.6064769, desc:"Réplica em escala real do Templo de Salomão, sede da Igreja Universal no Brás — impressiona pelo tamanho e pelos detalhes."},
+  {id:13, cat:"religioso", name:"Solo Sagrado de Guarapiranga", lat:-23.7511059, lon:-46.7456312, desc:"Santuário da Igreja Messiânica às margens da represa Guarapiranga, com jardins floridos e um templo aberto em forma de anel."},
+  {id:14, cat:"compras", name:"JK Iguatemi", lat:-23.5914102, lon:-46.6897221, desc:"Shopping de alto padrão na Vila Olímpia, com grifes internacionais e boa praça de alimentação."},
+  {id:15, cat:"compras", name:"Shopping Pátio Higienópolis", lat:-23.5422843, lon:-46.6575016, desc:"Shopping tradicional e elegante, num bairro residencial charmoso — bom para compras mais tranquilas."},
+  {id:16, cat:"museus", name:"Museu da Imigração de SP", lat:-23.549695, lon:-46.612694, desc:"Instalado na antiga Hospedaria dos Imigrantes, no Brás, conta a história de milhões de imigrantes que passaram por São Paulo."},
+  {id:17, cat:"museus", name:"Museu Judaico", lat:-23.5508137, lon:-46.6456471, desc:"Dedicado à história e à cultura judaica em São Paulo e no Brasil, com acervo de objetos, fotos e depoimentos."},
+  {id:18, cat:"museus", name:"Museu da Imigração Judaica e do Holocausto", lat:-23.5297566, lon:-46.6385586, desc:"Espaço dedicado à memória do Holocausto e à trajetória de imigrantes judeus em São Paulo."},
+  {id:19, cat:"museus", name:"Memorial da Imigração Judaica e do Holocausto", lat:-23.5297467, lon:-46.6385169, desc:"Memorial com relatos e objetos de sobreviventes — fica no mesmo complexo do museu vizinho, praticamente porta a porta."},
+  {id:20, cat:"hospedagem", name:"INNSiDE by Meliá São Paulo Itaim", lat:-23.582688, lon:-46.678101, desc:"Hotel no Itaim Bibi — provavelmente a base de hospedagem da viagem, não exatamente um passeio."},
+  {id:21, cat:"parques", name:"Jardim Oriental Liberdade", lat:-23.5562335, lon:-46.6354609, desc:"Pequeno jardim japonês tradicional perto da Praça da Liberdade, com lago, pedras e lanternas."},
+  {id:22, cat:"museus", name:"Planetário do Ibirapuera – “Aristóteles Orsini”", lat:-23.5843334, lon:-46.6609137, desc:"Sessões de astronomia sob uma cúpula, dentro do Parque Ibirapuera — bom passeio para observar o céu de perto."},
+  {id:23, cat:"religioso", name:"Catedral da Sé", lat:-23.5512802, lon:-46.6343427, desc:"Catedral neogótica no coração histórico da cidade, um dos maiores templos católicos do mundo — o marco zero de São Paulo."},
+  {id:24, cat:"religioso", name:"Pateo do Collegio", lat:-23.5479871, lon:-46.6326193, desc:"Local onde os padres jesuítas fundaram São Paulo em 1554 — hoje um museu e capela que contam a origem da cidade."},
+  {id:25, cat:"religioso", name:"Mosteiro de São Bento", lat:-23.5435648, lon:-46.6343548, desc:"Mosteiro beneditino do início do século XX, famoso pelo canto gregoriano nas missas de domingo e pela bela arquitetura interna."},
+  {id:26, cat:"passeios", name:"Mercado Municipal de São Paulo", lat:-23.542357, lon:-46.6296374, desc:"O “Mercadão”, famoso pelo sanduíche de mortadela e pelo pastel de bacalhau, com um vitral histórico no salão principal."},
+  {id:27, cat:"museus", name:"MASP – Museu de Arte de São Paulo", lat:-23.561414, lon:-46.6558819, desc:"Um dos museus mais importantes da América Latina, no icônico prédio suspenso da Av. Paulista."},
+  {id:28, cat:"parques", name:"Parque Trianon", lat:-23.5615399, lon:-46.657111, desc:"Pequeno pedaço de Mata Atlântica preservada bem no meio da Av. Paulista, ao lado do MASP — um respiro verde entre os prédios."},
+  {id:29, cat:"museus", name:"Sesc Avenida Paulista", lat:-23.5705156, lon:-46.645615, desc:"Centro cultural com exposições, teatro, cinema e restaurante, num prédio moderno logo depois do Trianon."},
+  {id:30, cat:"arquitetura", name:"Mirante – Sesc Avenida Paulista", lat:-23.570617, lon:-46.6454968, desc:"Terraço do Sesc Paulista com vista aberta para a avenida — bom programa de fim de tarde."},
+  {id:31, cat:"parques", name:"Parque Ibirapuera – Portão 4 (bikes)", lat:-23.5896838, lon:-46.6534929, desc:"Portão do Parque Ibirapuera mais indicado para quem quer alugar bicicleta e circular pelo parque com facilidade."},
+  {id:32, cat:"museus", name:"Museu de Arte Contemporânea (MAC USP)", lat:-23.5889906, lon:-46.6509962, desc:"Acervo de arte contemporânea brasileira e internacional, num edifício modernista dentro do Parque Ibirapuera."},
+  {id:33, cat:"museus", name:"Fundação Bienal de São Paulo", lat:-23.588009, lon:-46.653839, desc:"Pavilhão assinado por Oscar Niemeyer que sedia a Bienal de Arte e outras grandes exposições, dentro do Ibirapuera."},
+  {id:34, cat:"passeios", name:"Bairro da Liberdade", lat:-23.5551495, lon:-46.6359496, desc:"Bairro japonês da cidade, com lojas, templos, restaurantes orientais e a tradicional feira de artesanato de fim de semana."},
+  {id:35, cat:"passeios", name:"Beco do Batman", lat:-23.5571408, lon:-46.6865433, desc:"Vielas da Vila Madalena cobertas de grafites que mudam com frequência — point certo para fotos e arte urbana."},
+  {id:36, cat:"compras", name:"25 de Março", lat:-23.5429435, lon:-46.6323846, desc:"Rua e região super movimentadas no centro, famosas pelo comércio popular — vale para sentir o pulso comercial da cidade."},
+  {id:37, cat:"compras", name:"Oscar Freire (Galeria Melissa)", lat:-23.5636382, lon:-46.6686738, desc:"A rua mais chique de São Paulo, com grifes de luxo e a colorida Galeria Melissa — boa para andar e olhar vitrines."},
+  {id:38, cat:"museus", name:"Japan House São Paulo", lat:-23.5705, lon:-46.6446, desc:"Centro cultural japonês na Av. Paulista, com exposições, loja e restaurante — boa introdução ao design do Japão."},
+  {id:39, cat:"museus", name:"Casa das Rosas (Café Ristoro)", lat:-23.5710635, lon:-46.6451532, desc:"Casarão de 1935 na Paulista, hoje centro cultural com jardim, livraria e um café agradável para uma pausa."},
+  {id:40, cat:"museus", name:"Instituto Itaú Cultural", lat:-23.5703654, lon:-46.6458822, desc:"Espaço com exposições gratuitas, biblioteca e programação cultural variada, na Av. Paulista."},
+  {id:41, cat:"museus", name:"Museu do Ipiranga (Museu Paulista)", lat:-23.585578, lon:-46.609679, desc:"O clássico prédio neoclássico no Parque da Independência, reformado e reaberto em 2022, com acervo sobre a história do Brasil."},
+  {id:42, cat:"arquitetura", name:"Estação Luz", lat:-23.535105, lon:-46.6349318, desc:"Estação ferroviária histórica de 1901, com estrutura de ferro trazida da Inglaterra — hoje também abriga o Museu da Língua Portuguesa."},
+  {id:43, cat:"museus", name:"Museu da Língua Portuguesa", lat:-23.5349671, lon:-46.6351641, desc:"Museu interativo sobre a língua portuguesa, dentro da histórica Estação da Luz — reaberto após um incêndio em 2015."},
+  {id:44, cat:"museus", name:"Pinacoteca do Estado de São Paulo", lat:-23.5342666, lon:-46.6339501, desc:"O museu de arte mais antigo da cidade, com forte acervo brasileiro dos séculos XIX e XX, perto do Parque da Luz."},
+  {id:45, cat:"arquitetura", name:"Sampa Sky", lat:-23.5420174, lon:-46.6357797, desc:"Mirante de vidro suspenso no 42º andar do Edifício Mirante do Vale, com decks que parecem flutuar sobre o Centro Histórico."},
+  {id:46, cat:"arquitetura", name:"Farol Santander", lat:-23.5456813, lon:-46.6340549, desc:"Mirante e centro cultural no alto do histórico Edifício Altino Arantes (antigo Banespa), com vista de 360° sobre o centro."},
+  {id:47, cat:"museus", name:"Museu Catavento", lat:-23.5440513, lon:-46.6272063, desc:"Museu de ciências interativo para todas as idades, no antigo Palácio das Indústrias, perto do Mercado Municipal."},
+  {id:48, cat:"arquitetura", name:"Teatro Municipal de São Paulo", lat:-23.5452348, lon:-46.638615, desc:"Teatro histórico de 1911, inspirado na Ópera de Paris, símbolo da vida cultural paulistana — vale a visita mesmo sem ver um espetáculo."},
+  {id:49, cat:"museus", name:"Museu Histórico da Imigração Japonesa", lat:-23.5612483, lon:-46.6351323, desc:"Conta a história da imigração japonesa para o Brasil, no coração do bairro da Liberdade."},
+  {id:50, cat:"compras", name:"Shopping Iguatemi", lat:-23.5769265, lon:-46.6882984, desc:"O primeiro shopping center do Brasil, inaugurado em 1966, ainda um dos mais tradicionais e sofisticados da cidade."},
+  {id:51, cat:"compras", name:"Morumbi Shopping", lat:-23.6233618, lon:-46.6988352, desc:"Grande shopping na zona sul, perto do Morumbi e do Ibirapuera, com boa variedade de lojas e cinema."},
+  {id:52, cat:"arquitetura", name:"Cidade Matarazzo", lat:-23.560502427689325, lon:-46.6532605865075, desc:"Antigo complexo hospitalar do início do século XX, restaurado e transformado num luxuoso conjunto com hotel Rosewood, jardins assinados por Philippe Starck e espaços culturais — vale o passeio pela arquitetura e pelos jardins."}
+];
+
+/* ===================== estado ===================== */
+const selected = new Set();
+let activeCat = "todos";
+let searchTerm = "";
+const markers = {};
+
+/* ===================== helpers ===================== */
+function iconSvg(cat, size=13){
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${CATS[cat].icon}</svg>`;
+}
+
+function buildChips(){
+  const wrap = document.getElementById('chips');
+  const counts = {};
+  DATA.forEach(d => counts[d.cat] = (counts[d.cat]||0)+1);
+
+  const all = document.createElement('div');
+  all.className = 'chip active';
+  all.dataset.cat = 'todos';
+  all.innerHTML = `<span class="dot" style="background:var(--select)"></span>Todos <span class="count">${DATA.length}</span>`;
+  wrap.appendChild(all);
+
+  Object.keys(CATS).forEach(key=>{
+    const c = CATS[key];
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.dataset.cat = key;
+    el.innerHTML = `<span class="dot" style="background:${c.color}"></span>${c.label} <span class="count">${counts[key]||0}</span>`;
+    wrap.appendChild(el);
+  });
+
+  wrap.addEventListener('click', e=>{
+    const chip = e.target.closest('.chip');
+    if(!chip) return;
+    activeCat = chip.dataset.cat;
+    [...wrap.children].forEach(c=>c.classList.toggle('active', c===chip));
+    renderCards();
+  });
+}
+
+function matches(item){
+  const catOk = activeCat === 'todos' || item.cat === activeCat;
+  const term = searchTerm.trim().toLowerCase();
+  const searchOk = !term || item.name.toLowerCase().includes(term);
+  return catOk && searchOk;
+}
+
+function renderCards(){
+  const grid = document.getElementById('grid');
+  const list = DATA.filter(matches);
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty">Nenhum ponto encontrado com esse filtro.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(item=>{
+    const cat = CATS[item.cat];
+    const isSel = selected.has(item.id);
+    return `
+      <div class="card ${isSel?'selected':''}" data-id="${item.id}" style="--cat-color:${cat.color}">
+        <div class="card-top">
+          <span class="cat-tag">${iconSvg(item.cat)}${cat.label}</span>
+          <div class="card-actions">
+            <a class="route-btn" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}" target="_blank" rel="noopener" aria-label="Rota no Google Maps" title="Rota no Google Maps">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            </a>
+            <span class="check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </span>
+          </div>
+        </div>
+        <h3>${item.name}</h3>
+        <p>${item.desc}</p>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('grid').addEventListener('click', e=>{
+  if(e.target.closest('.route-btn')) return;
+  const card = e.target.closest('.card');
+  if(!card) return;
+  toggleSelect(Number(card.dataset.id));
+  card.classList.toggle('selected', selected.has(Number(card.dataset.id)));
+});
+
+document.getElementById('searchInput').addEventListener('input', e=>{
+  searchTerm = e.target.value;
+  renderCards();
+});
+
+/* ===================== seleção ===================== */
+function toggleSelect(id){
+  if(selected.has(id)) selected.delete(id); else selected.add(id);
+  updateBar();
+  updateMarker(id);
+  scheduleSave();
+}
+
+function updateBar(){
+  document.getElementById('selCount').textContent = selected.size;
+}
+
+/* ---- sincronização remota ---- */
+let saveTimer = null;
+
+function setSyncState(state){
+  const dot = document.getElementById('syncDot');
+  if(!dot) return;
+  dot.classList.remove('ok','busy','err');
+  if(state) dot.classList.add(state);
+  const titles = { ok:'Sincronizado', busy:'Salvando…', err:'Sem conexão com o servidor de sincronização' };
+  dot.title = titles[state] || '';
+}
+
+function scheduleSave(){
+  if(!syncEnabled()) return;
+  setSyncState('busy');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveSelection, 700);
+}
+
+async function saveSelection(){
+  const payload = { ids: [...selected].sort((a,b)=>a-b), updatedAt: new Date().toISOString() };
+  try{
+    const res = await fetch(FIREBASE_DB_URL + SYNC_PATH, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('status ' + res.status);
+    setSyncState('ok');
+  }catch(err){
+    setSyncState('err');
+  }
+}
+
+async function loadSelection(){
+  if(!syncEnabled()) return;
+  setSyncState('busy');
+  try{
+    const res = await fetch(FIREBASE_DB_URL + SYNC_PATH);
+    const data = await res.json();
+    if(data && Array.isArray(data.ids)){
+      data.ids.forEach(id=>{
+        if(DATA.some(d=>d.id===id)){
+          selected.add(id);
+          updateMarker(id);
+        }
+      });
+      document.querySelectorAll('.card').forEach(card=>{
+        if(selected.has(Number(card.dataset.id))) card.classList.add('selected');
+      });
+      updateBar();
+      if(data.updatedAt){
+        const info = document.getElementById('syncInfo');
+        const d = new Date(data.updatedAt);
+        info.textContent = `Última atualização: ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
+        info.style.display = 'block';
+      }
+    }
+    setSyncState('ok');
+  }catch(err){
+    setSyncState('err');
+  }
+}
+
+/* ===================== mapa ===================== */
+const map = L.map('map', { scrollWheelZoom:false });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap',
+  maxZoom: 19
+}).addTo(map);
+
+function markerIcon(cat, isSel){
+  const c = CATS[cat];
+  return L.divIcon({
+    className: '',
+    html: `<div class="mk ${isSel?'on':''}" style="background:${c.hex}"></div>`,
+    iconSize: isSel ? [20,20] : [16,16]
+  });
+}
+
+const latlngs = [];
+DATA.forEach(item=>{
+  const m = L.marker([item.lat, item.lon], { icon: markerIcon(item.cat, false) }).addTo(map);
+  const popupHtml = `
+    <div class="pop-cat">${CATS[item.cat].label}</div>
+    <div class="pop-name">${item.name}</div>
+    <div class="pop-desc">${item.desc}</div>
+    <div class="pop-actions">
+      <button class="pop-btn" data-id="${item.id}">Selecionar</button>
+      <a class="pop-route" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}" target="_blank" rel="noopener" aria-label="Rota no Google Maps" title="Rota no Google Maps">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      </a>
+    </div>`;
+  m.bindPopup(popupHtml);
+  m.on('popupopen', (ev)=>{
+    const btn = ev.popup.getElement().querySelector('.pop-btn');
+    const isSel = selected.has(item.id);
+    btn.classList.toggle('on', isSel);
+    btn.textContent = isSel ? 'Selecionado ✓' : 'Selecionar';
+    btn.onclick = ()=>{
+      toggleSelect(item.id);
+      const nowSel = selected.has(item.id);
+      btn.classList.toggle('on', nowSel);
+      btn.textContent = nowSel ? 'Selecionado ✓' : 'Selecionar';
+      const card = document.querySelector(`.card[data-id="${item.id}"]`);
+      if(card) card.classList.toggle('selected', nowSel);
+    };
+  });
+  markers[item.id] = m;
+  latlngs.push([item.lat, item.lon]);
+});
+map.fitBounds(latlngs, { padding:[26,26] });
+
+function updateMarker(id){
+  const item = DATA.find(d=>d.id===id);
+  markers[id].setIcon(markerIcon(item.cat, selected.has(id)));
+}
+
+/* ===================== sheet ===================== */
+const overlay = document.getElementById('overlay');
+document.getElementById('openSheetBtn').addEventListener('click', openSheet);
+document.getElementById('closeSheetBtn').addEventListener('click', closeSheet);
+overlay.addEventListener('click', e=>{ if(e.target===overlay) closeSheet(); });
+
+function openSheet(){
+  renderSheet();
+  overlay.classList.add('open');
+}
+function closeSheet(){ overlay.classList.remove('open'); }
+
+function renderSheet(){
+  const box = document.getElementById('sheetList');
+  const items = DATA.filter(d=>selected.has(d.id));
+  if(items.length===0){
+    box.innerHTML = `<div class="sheet-empty">Nenhum ponto selecionado ainda.<br>Toque nos cartões ou nos pontos do mapa.</div>`;
+    return;
+  }
+  box.innerHTML = items.map(item=>`
+    <div class="sheet-item" data-id="${item.id}">
+      <span class="sheet-dot" style="background:${CATS[item.cat].color}"></span>
+      <span class="name">${item.name}</span>
+      <button class="rm" data-id="${item.id}">remover</button>
+    </div>`).join('');
+}
+
+document.getElementById('sheetList').addEventListener('click', e=>{
+  const btn = e.target.closest('.rm');
+  if(!btn) return;
+  const id = Number(btn.dataset.id);
+  toggleSelect(id);
+  const card = document.querySelector(`.card[data-id="${id}"]`);
+  if(card) card.classList.remove('selected');
+  renderSheet();
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  [...selected].forEach(id=>{
+    selected.delete(id);
+    updateMarker(id);
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if(card) card.classList.remove('selected');
+  });
+  updateBar();
+  renderSheet();
+  scheduleSave();
+});
+
+function selectionText(){
+  const items = DATA.filter(d=>selected.has(d.id));
+  const byCat = {};
+  items.forEach(i=>{ (byCat[i.cat] = byCat[i.cat]||[]).push(i.name); });
+  let out = "Pontos em São Paulo que quero visitar:\n";
+  Object.keys(CATS).forEach(key=>{
+    if(byCat[key]){
+      out += `\n${CATS[key].label}:\n` + byCat[key].map(n=>`- ${n}`).join('\n') + '\n';
+    }
+  });
+  return out.trim();
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+document.getElementById('copyBtn').addEventListener('click', async ()=>{
+  if(selected.size===0){ showToast('Nada selecionado ainda'); return; }
+  const text = selectionText();
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Lista copiada');
+  }catch(err){
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Lista copiada');
+  }
+});
+
+document.getElementById('waBtn').addEventListener('click', ()=>{
+  if(selected.size===0){ showToast('Nada selecionado ainda'); return; }
+  const text = encodeURIComponent(selectionText());
+  window.open(`https://wa.me/?text=${text}`, '_blank');
+});
+
+/* ===================== init ===================== */
+buildChips();
+renderCards();
+updateBar();
+loadSelection();
+</script>
+</body>
+</html>
