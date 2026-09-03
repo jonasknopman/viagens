@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>São Paulo — restaurantes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg: #17181b;
+    --bg-elev: #201f22;
+    --bg-elev-2: #29282c;
+    --ink: #f2efe9;
+    --ink-dim: #aeaba3;
+    --ink-faint: #7c7a76;
+    --line: rgba(242,239,233,.10);
+    --line-strong: rgba(242,239,233,.18);
+    --select: #ffd166;
+    --select-ink: #201a06;
+
+    --c-francesa: #78a9cc;
+    --c-italiana: #6fbb8d;
+    --c-contemporanea: #e0a83a;
+    --c-japonesa: #d67a55;
+    --c-deli: #ac93d1;
+    --c-regional: #ef9463;
+    --c-casual: #93a9b6;
+
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-tap-highlight-color: transparent; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,209,102,.05), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: 90px;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 18px; }
+
+  h1,h2,h3, .disp{ font-family:'Space Grotesk', 'Inter', sans-serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* ---------- header ---------- */
+  header{ padding:34px 0 18px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.16em;
+    color: var(--select);
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px; height:1px; background: var(--select);
+    display:inline-block;
+  }
+  header h1{
+    font-size: clamp(26px, 4.6vw, 38px);
+    line-height:1.12;
+    font-weight:700;
+    margin:0 0 12px;
+    max-width: 17ch;
+  }
+  header p{
+    font-size:14.5px;
+    line-height:1.55;
+    color:var(--ink-dim);
+    max-width:52ch;
+    margin:0;
+  }
+
+  /* ---------- map ---------- */
+  #map{
+    height: 340px;
+    border-radius: var(--radius);
+    margin-top:22px;
+    border:1px solid var(--line-strong);
+    background:var(--bg-elev);
+  }
+  @media (max-width:640px){ #map{ height:250px; } }
+  .leaflet-popup-content-wrapper{
+    background:var(--bg-elev-2); color:var(--ink);
+    border-radius:12px; border:1px solid var(--line-strong);
+  }
+  .leaflet-popup-tip{ background:var(--bg-elev-2); }
+  .leaflet-popup-content{ margin:12px 14px; font-family:'Inter',sans-serif; }
+  .pop-cat{ font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; opacity:.75; margin-bottom:4px;}
+  .pop-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px; margin-bottom:6px; }
+  .pop-desc{ font-size:12.5px; line-height:1.45; color:var(--ink-dim); margin-bottom:8px; }
+  .pop-price{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--select); margin-bottom:10px; }
+  .pop-actions{ display:flex; gap:8px; align-items:stretch; }
+  .pop-btn{
+    flex:1;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em;
+    border:1px solid var(--line-strong); background:transparent; color:var(--ink);
+    padding:7px 12px; border-radius:8px; cursor:pointer;
+  }
+  .pop-btn.on{ background:var(--select); color:var(--select-ink); border-color:var(--select); font-weight:600; }
+  .pop-route{
+    flex:none; width:34px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line-strong); border-radius:8px;
+    color:var(--ink-dim); text-decoration:none; transition: all .15s ease;
+  }
+  .pop-route:hover{ background:var(--bg-elev-2); color:var(--ink); border-color:var(--ink-faint); }
+  .pop-route svg{ width:14px; height:14px; }
+  .leaflet-container a.leaflet-popup-close-button{ color:var(--ink-dim); }
+  .mk{
+    width:16px; height:16px; border-radius:50%;
+    border:2px solid rgba(23,24,27,.75);
+    box-shadow:0 0 0 2px rgba(242,239,233,.25);
+  }
+  .mk.on{ width:20px; height:20px; box-shadow:0 0 0 3px var(--select); }
+
+  /* ---------- controls (sticky) ---------- */
+  .controls{
+    position:sticky; top:0; z-index:20;
+    background: linear-gradient(var(--bg) 78%, transparent);
+    padding:16px 0 10px;
+    margin-top: 4px;
+  }
+  .search{
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg-elev); border:1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding:10px 14px; margin-bottom:12px;
+  }
+  .search svg{ flex:none; opacity:.55; }
+  .search input{
+    background:none; border:none; outline:none; color:var(--ink);
+    font-family:'Inter',sans-serif; font-size:14.5px; width:100%;
+  }
+  .search input::placeholder{ color:var(--ink-faint); }
+
+  .chips{
+    display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;
+    scrollbar-width:none;
+  }
+  .chips::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:none;
+    display:flex; align-items:center; gap:7px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px; letter-spacing:.02em;
+    color:var(--ink-dim);
+    background:var(--bg-elev);
+    border:1px solid var(--line-strong);
+    padding:8px 13px 8px 10px;
+    border-radius:100px;
+    cursor:pointer;
+    user-select:none;
+    transition: border-color .15s, color .15s, background .15s;
+    white-space:nowrap;
+  }
+  .chip .dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .chip .count{ opacity:.6; }
+  .chip.active{ color:var(--ink); background:var(--bg-elev-2); border-color:var(--line-strong); }
+  .chip.active .dot{ box-shadow:0 0 0 3px currentColor; }
+  .chip:hover{ border-color: var(--ink-faint); }
+
+  /* ---------- grid / cards ---------- */
+  #grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+    gap:12px;
+    margin: 14px 0 10px;
+  }
+  .card{
+    position:relative;
+    background:var(--bg-elev);
+    border:1px solid var(--line);
+    border-left:3px solid var(--cat-color, var(--line));
+    border-radius: var(--radius-sm);
+    padding:14px 14px 15px;
+    cursor:pointer;
+    transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    animation: rise .35s ease both;
+  }
+  .card:hover{ background:var(--bg-elev-2); }
+  .card:active{ transform: scale(.985); }
+  .card.selected{
+    border-color: var(--select);
+    background: linear-gradient(180deg, rgba(255,209,102,.09), rgba(255,209,102,.02));
+  }
+  .card-top{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:10px; margin-bottom:8px;
+  }
+  .cat-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--cat-color);
+  }
+  .cat-tag svg{ width:13px; height:13px; }
+  .card-actions{ display:flex; align-items:center; gap:8px; flex:none; }
+  .route-btn{
+    width:22px; height:22px; border-radius:50%;
+    border:1.5px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--ink-dim); text-decoration:none;
+    transition: all .15s ease;
+  }
+  .route-btn svg{ width:12px; height:12px; }
+  .route-btn:hover{ background:var(--bg-elev-2); border-color:var(--ink-faint); color:var(--ink); }
+  .check{
+    flex:none;
+    width:22px; height:22px; border-radius:50%;
+    border:1.5px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center;
+    transition: all .15s ease;
+  }
+  .card.selected .check{
+    background:var(--select); border-color:var(--select);
+  }
+  .check svg{ width:12px; height:12px; opacity:0; transition:opacity .1s; color:var(--select-ink); }
+  .card.selected .check svg{ opacity:1; }
+  .card h3{
+    font-size:16px; font-weight:600; line-height:1.28;
+    margin:0 0 6px;
+  }
+  .card p{
+    font-size:13px; line-height:1.5; color:var(--ink-dim);
+    margin:0;
+  }
+  .price-tag{
+    display:inline-flex; align-items:baseline; gap:4px;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; font-weight:600;
+    color: var(--select);
+    border:1px solid rgba(255,209,102,.35);
+    background:rgba(255,209,102,.08);
+    padding:4px 10px; border-radius:100px; margin-top:11px;
+  }
+  .price-tag .unit{ color:var(--ink-faint); font-weight:400; font-size:10.5px; }
+  .empty{
+    grid-column:1/-1; text-align:center; padding:50px 20px; color:var(--ink-faint);
+    font-size:13.5px;
+  }
+
+  @keyframes rise{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){ .card{ animation:none; } }
+
+  /* ---------- bottom bar ---------- */
+  .bar{
+    position:fixed; left:0; right:0; bottom:16px;
+    display:flex; justify-content:center; z-index:30;
+    pointer-events:none;
+  }
+  .bar-inner{
+    pointer-events:auto;
+    display:flex; align-items:center; gap:14px;
+    background:#0d0d0e;
+    border:1px solid rgba(255,209,102,.35);
+    border-radius:100px;
+    padding:9px 9px 9px 18px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.45);
+  }
+  .bar-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px; color:var(--select);
+    white-space:nowrap;
+  }
+  .bar-count b{ color:var(--ink); font-size:14px; }
+  .bar button.view{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    background:var(--select); color:var(--select-ink);
+    border:none; border-radius:100px; padding:10px 18px; cursor:pointer;
+  }
+
+  /* ---------- sheet / modal ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(10,10,11,.6);
+    backdrop-filter: blur(2px);
+    display:none; align-items:flex-end; justify-content:center;
+    z-index:40;
+  }
+  .overlay.open{ display:flex; }
+  @media (min-width:640px){ .overlay{ align-items:center; } }
+  .sheet{
+    width:100%; max-width:560px;
+    max-height:82vh;
+    background:var(--bg-elev);
+    border:1px solid var(--line-strong);
+    border-bottom:none;
+    border-radius:20px 20px 0 0;
+    display:flex; flex-direction:column;
+    animation: slideup .22s ease;
+  }
+  @media (min-width:640px){ .sheet{ border-radius:20px; border-bottom:1px solid var(--line-strong); } }
+  @keyframes slideup{ from{ transform:translateY(24px); opacity:.4; } to{ transform:none; opacity:1; } }
+  .sheet-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 20px 12px; border-bottom:1px solid var(--line);
+  }
+  .sheet-head h2{ font-size:18px; margin:0; }
+  .sheet-head button{
+    background:none; border:none; color:var(--ink-dim); cursor:pointer; padding:6px;
+  }
+  .sheet-list{ overflow-y:auto; padding:8px 12px; }
+  .sheet-item{
+    display:flex; align-items:center; gap:10px;
+    padding:11px 10px; border-radius:10px;
+  }
+  .sheet-item:hover{ background:var(--bg-elev-2); }
+  .sheet-dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .sheet-item .name{ flex:1; font-size:14px; }
+  .sheet-item .sheet-price{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-faint); white-space:nowrap;
+  }
+  .sheet-item .rm{
+    background:none; border:none; color:var(--ink-faint); cursor:pointer;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:4px 8px;
+  }
+  .sheet-item .rm:hover{ color:var(--ink); }
+  .sheet-empty{ padding:40px 20px; text-align:center; color:var(--ink-faint); font-size:13.5px; }
+  .sheet-foot{
+    display:flex; gap:8px; padding:14px 20px calc(18px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line); flex-wrap:wrap;
+  }
+  .sheet-foot button{
+    flex:1; min-width:120px;
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    border-radius:10px; padding:11px 12px; cursor:pointer; border:1px solid var(--line-strong);
+    background:var(--bg-elev-2); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; gap:7px;
+  }
+  .sheet-foot button.primary{ background:var(--select); color:var(--select-ink); border-color:var(--select); }
+  .sheet-foot button.ghost{ flex:none; min-width:0; background:transparent; color:var(--ink-faint); }
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(8px);
+    background:var(--ink); color:var(--bg); font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    padding:10px 16px; border-radius:100px; z-index:50; opacity:0; pointer-events:none;
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .sync-info{
+    margin-top:12px; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    color:var(--ink-faint); display:none;
+  }
+  .sync-dot{
+    width:7px; height:7px; border-radius:50%; flex:none;
+    background:var(--ink-faint); transition:background .2s;
+  }
+  .sync-dot.ok{ background:#6fbb8d; }
+  .sync-dot.busy{ background:var(--select); animation:pulse 1s infinite; }
+  .sync-dot.err{ background:#d67a55; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Roteiro · São Paulo</div>
+    <h1>Escolha onde vocês vão comer</h1>
+    <p>17 restaurantes pela cidade — dos badalados aos mais informais. Toque nos que quer experimentar; o preço é uma estimativa por pessoa, sem bebidas especiais. Tudo fica salvo automaticamente.</p>
+    <p class="sync-info" id="syncInfo"></p>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="Buscar por nome…" />
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="grid"></div>
+</div>
+
+<div class="bar">
+  <div class="bar-inner">
+    <span class="sync-dot" id="syncDot" title="Sincronizando…"></span>
+    <div class="bar-count"><b id="selCount">0</b> selecionados</div>
+    <button class="view" id="openSheetBtn">Ver lista</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Seus restaurantes</h2>
+      <button id="closeSheetBtn" aria-label="Fechar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="sheet-list" id="sheetList"></div>
+    <div class="sheet-foot">
+      <button id="copyBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        Copiar lista
+      </button>
+      <button id="waBtn" class="primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.4.1-.6l.4-.5c.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4L10 8.3c-.2-.4-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1.1 2.7c.1.2 1.9 2.9 4.6 4 .6.3 1.1.4 1.5.6.6.2 1.2.1 1.6.1.5-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3-.1-.2-.3-.2-.6-.4Z"/><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></svg>
+        WhatsApp
+      </button>
+      <button id="clearBtn" class="ghost">Limpar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Lista copiada</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===================== sincronização (Firebase Realtime Database) =====================
+   Usa o mesmo banco de dados do roteiro de pontos turísticos, só que num
+   caminho (path) separado — assim as seleções de um roteiro não sobrescrevem
+   as do outro. */
+const FIREBASE_DB_URL = "https://saopaulo-5c26c-default-rtdb.firebaseio.com";
+const SYNC_PATH = "/roteiro_sp/selecao_restaurantes.json";
+const syncEnabled = () => FIREBASE_DB_URL && !FIREBASE_DB_URL.includes("COLE_AQUI");
+
+/* ===================== dados ===================== */
+const CATS = {
+  francesa:      { label:"Francesa",             color:"var(--c-francesa)",      hex:"#78a9cc",
+    icon:'<path d="M8 3h8l-.8 6.2a3.2 3.2 0 0 1-6.4 0L8 3Z"/><path d="M12 12.5V19"/><path d="M8.5 21h7"/>' },
+  italiana:      { label:"Italiana",             color:"var(--c-italiana)",      hex:"#6fbb8d",
+    icon:'<path d="M12 3 3 20h18L12 3Z"/><circle cx="12" cy="15" r="1"/><circle cx="9" cy="17.5" r="1"/><circle cx="15" cy="17.5" r="1"/>' },
+  contemporanea: { label:"Contemporânea",        color:"var(--c-contemporanea)", hex:"#e0a83a",
+    icon:'<path d="M8.5 3v6.5a1.8 1.8 0 0 0 3.6 0V3"/><path d="M10.3 9.5V21"/><path d="M16 3c-1.3.6-1.7 2.5-1.7 4.3 0 1.8.6 3.2 1.7 3.7V21"/>' },
+  japonesa:      { label:"Japonesa",             color:"var(--c-japonesa)",      hex:"#d67a55",
+    icon:'<path d="M4 12a8 4.5 0 0 0 16 0"/><path d="M3.5 12h17"/><path d="M9 4.5 10.5 12M16 4l-1.3 8"/>' },
+  deli:          { label:"Padaria e Deli",       color:"var(--c-deli)",          hex:"#ac93d1",
+    icon:'<path d="M4 16.5c0-6 3.8-9.5 8-9.5s8 3.5 8 9.5c-2 2-5 3-8 3s-6-1-8-3Z"/><path d="M8 16V10.5M12 16.5V8.5M16 16V10.5"/>' },
+  regional:      { label:"Regional Brasileira",  color:"var(--c-regional)",      hex:"#ef9463",
+    icon:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2.5 12h3M18.5 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/>' },
+  casual:        { label:"Casual e Rápido",      color:"var(--c-casual)",        hex:"#93a9b6",
+    icon:'<path d="M4.5 10.5a7.5 4 0 0 1 15 0Z"/><path d="M4 14h16"/><path d="M4.5 17.3a1.6 1.6 0 0 0 0 3.2h15a1.6 1.6 0 0 0 0-3.2"/>' }
+};
+
+const DATA = [
+  {id:1, cat:"casual", name:"Mequi 1000 - McDonald's", lat:-23.5603666, lon:-46.6580263, price:"R$ 30–45", desc:"Uma das maiores unidades do McDonald's da América Latina, funcionando 24 horas — opção prática e infalível para crianças ou quando bate aquela vontade de fast-food."},
+  {id:2, cat:"francesa", name:"Le Bife", lat:-23.5822442, lon:-46.6809403, price:"R$ 150–200", desc:"Bistrô assinado por Erick Jacquin, especializado em cortes de carne com molho à escolha, batatas fritas e guarnições estilo rodízio. Selo Bib Gourmand do Guia Michelin."},
+  {id:3, cat:"italiana", name:"Arturito", lat:-23.5599219, lon:-46.6775784, price:"R$ 150–250", desc:"Cozinha ítalo-mediterrânea da chef argentina Paola Carosella (MasterChef Brasil), com massas artesanais e peixes frescos — o menu executivo do almoço sai mais em conta."},
+  {id:4, cat:"italiana", name:"Modern Mamma Osteria", lat:-23.58188, lon:-46.6798563, price:"R$ 150–200", desc:"O concorrido “Moma”, com massas fartas para dividir como a lasanheta de vitelo com trufas negras — espere fila, mas a comida costuma justificar a espera."},
+  {id:5, cat:"contemporanea", name:"Maní", lat:-23.5662429, lon:-46.679553, price:"R$ 250–700", desc:"Restaurante com estrela Michelin da chef Helena Rizzo (MasterChef Brasil), cozinha brasileira contemporânea. O menu à la carte sai bem mais em conta que a degustação completa."},
+  {id:6, cat:"contemporanea", name:"Sal Gastronomia", lat:-23.5619404, lon:-46.6678049, price:"R$ 150–220", desc:"Cozinha brasileira contemporânea do chef Henrique Fogaça (MasterChef Brasil), tempero marcante — o Aligot de cordeiro é o prato mais pedido da casa."},
+  {id:7, cat:"japonesa", name:"Restaurante Kazu", lat:-23.5578761, lon:-46.6355277, price:"R$ 80–120", desc:"Japonês tradicional e despretensioso no coração da Liberdade, com salada bar à vontade e pratos quentes fartos como katsudon e gyudon."},
+  {id:8, cat:"italiana", name:"QT Pizza Bar", lat:-23.5660241, lon:-46.6644688, price:"R$ 120–160", desc:"Pizzaria napolitana premiada (50 Top Pizza), fermentação natural de 48h, drinks autorais e sabores criativos como gorgonzola com mel trufado."},
+  {id:9, cat:"deli", name:"Botanikafé Jardins", lat:-23.5625497, lon:-46.6677741, price:"R$ 60–90", desc:"Café cheio de plantas especializado em brunch o dia todo — ovos beneditinos, bowls de açaí e boas opções vegetarianas, pet friendly."},
+  {id:10, cat:"francesa", name:"Ça-Va - Erick Jacquin", lat:-23.5604537, lon:-46.6562435, price:"R$ 150–200", desc:"Bistrô francês despretensioso de Erick Jacquin, com clássicos como steak tartar e petit gâteau — um pedacinho de Paris perto da Paulista."},
+  {id:11, cat:"francesa", name:"Restaurante Les Présidents (Erick Jacquin)", lat:-23.562705, lon:-46.6700846, price:"R$ 250–400 (degustação R$ 660)", desc:"O mais sofisticado dos restaurantes de Erick Jacquin, num casarão de fachada preta — cozinha francesa refinada, à la carte ou menu degustação de sete etapas."},
+  {id:12, cat:"regional", name:"Mocotó - Bar e Restaurante", lat:-23.4867177, lon:-46.5816933, price:"R$ 80–120", desc:"Referência em comida sertaneja pelo chef Rodrigo Oliveira (MasterChef Brasil), na Vila Medeiros — famoso pelos dadinhos de tapioca. Costuma ter fila, vá cedo."},
+  {id:13, cat:"casual", name:"Paul's Boutique Pizza", lat:-23.5800074, lon:-46.6748211, price:"R$ 40–60", desc:"Fatias e pizzas inteiras estilo Nova York, massa fina e crocante, coberturas criativas como milho com bacon e mel, no Itaim Bibi."},
+  {id:14, cat:"deli", name:"Padaria Gemel", lat:-23.5716638, lon:-46.6485954, price:"R$ 50–80", desc:"Padaria e delicatessen de bairro com ares gourmet — pães, doces, salgados e bufê de almoço, famosa pela rabanada."},
+  {id:15, cat:"deli", name:"Shoshana Delishop", lat:-23.5294729, lon:-46.6372304, price:"R$ 80–120", desc:"Único restaurante de comida judaica do Bom Retiro há mais de 30 anos, com pratos da diáspora para compartilhar, em clima de boteco."},
+  {id:16, cat:"francesa", name:"ICI Bistro", lat:-23.5504421, lon:-46.6592171, price:"R$ 130–180", desc:"Clássicos da cozinha francesa como steak tartare, pato confit e tarte tatin, num bistrô charmoso quase transportado de Paris."},
+  {id:17, cat:"italiana", name:"Mata Città", lat:-23.5618512, lon:-46.6535235, price:"R$ 120–180", desc:"Restaurante italiano dentro da Cidade Matarazzo, com cenografia inspirada no cinema italiano dos anos 60/70 — pizzas e massas para compartilhar."}
+];
+
+/* ===================== estado ===================== */
+const selected = new Set();
+let activeCat = "todos";
+let searchTerm = "";
+const markers = {};
+
+/* ===================== helpers ===================== */
+function iconSvg(cat, size=13){
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${CATS[cat].icon}</svg>`;
+}
+
+function buildChips(){
+  const wrap = document.getElementById('chips');
+  const counts = {};
+  DATA.forEach(d => counts[d.cat] = (counts[d.cat]||0)+1);
+
+  const all = document.createElement('div');
+  all.className = 'chip active';
+  all.dataset.cat = 'todos';
+  all.innerHTML = `<span class="dot" style="background:var(--select)"></span>Todos <span class="count">${DATA.length}</span>`;
+  wrap.appendChild(all);
+
+  Object.keys(CATS).forEach(key=>{
+    const c = CATS[key];
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.dataset.cat = key;
+    el.innerHTML = `<span class="dot" style="background:${c.color}"></span>${c.label} <span class="count">${counts[key]||0}</span>`;
+    wrap.appendChild(el);
+  });
+
+  wrap.addEventListener('click', e=>{
+    const chip = e.target.closest('.chip');
+    if(!chip) return;
+    activeCat = chip.dataset.cat;
+    [...wrap.children].forEach(c=>c.classList.toggle('active', c===chip));
+    renderCards();
+  });
+}
+
+function matches(item){
+  const catOk = activeCat === 'todos' || item.cat === activeCat;
+  const term = searchTerm.trim().toLowerCase();
+  const searchOk = !term || item.name.toLowerCase().includes(term);
+  return catOk && searchOk;
+}
+
+function renderCards(){
+  const grid = document.getElementById('grid');
+  const list = DATA.filter(matches);
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty">Nenhum restaurante encontrado com esse filtro.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(item=>{
+    const cat = CATS[item.cat];
+    const isSel = selected.has(item.id);
+    return `
+      <div class="card ${isSel?'selected':''}" data-id="${item.id}" style="--cat-color:${cat.color}">
+        <div class="card-top">
+          <span class="cat-tag">${iconSvg(item.cat)}${cat.label}</span>
+          <div class="card-actions">
+            <a class="route-btn" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}" target="_blank" rel="noopener" aria-label="Rota no Google Maps" title="Rota no Google Maps">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            </a>
+            <span class="check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </span>
+          </div>
+        </div>
+        <h3>${item.name}</h3>
+        <p>${item.desc}</p>
+        <div class="price-tag">${item.price} <span class="unit">/ pessoa</span></div>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('grid').addEventListener('click', e=>{
+  if(e.target.closest('.route-btn')) return;
+  const card = e.target.closest('.card');
+  if(!card) return;
+  toggleSelect(Number(card.dataset.id));
+  card.classList.toggle('selected', selected.has(Number(card.dataset.id)));
+});
+
+document.getElementById('searchInput').addEventListener('input', e=>{
+  searchTerm = e.target.value;
+  renderCards();
+});
+
+/* ===================== seleção ===================== */
+function toggleSelect(id){
+  if(selected.has(id)) selected.delete(id); else selected.add(id);
+  updateBar();
+  updateMarker(id);
+  scheduleSave();
+}
+
+function updateBar(){
+  document.getElementById('selCount').textContent = selected.size;
+}
+
+/* ---- sincronização remota ---- */
+let saveTimer = null;
+
+function setSyncState(state){
+  const dot = document.getElementById('syncDot');
+  if(!dot) return;
+  dot.classList.remove('ok','busy','err');
+  if(state) dot.classList.add(state);
+  const titles = { ok:'Sincronizado', busy:'Salvando…', err:'Sem conexão com o servidor de sincronização' };
+  dot.title = titles[state] || '';
+}
+
+function scheduleSave(){
+  if(!syncEnabled()) return;
+  setSyncState('busy');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveSelection, 700);
+}
+
+async function saveSelection(){
+  const payload = { ids: [...selected].sort((a,b)=>a-b), updatedAt: new Date().toISOString() };
+  try{
+    const res = await fetch(FIREBASE_DB_URL + SYNC_PATH, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('status ' + res.status);
+    setSyncState('ok');
+  }catch(err){
+    setSyncState('err');
+  }
+}
+
+async function loadSelection(){
+  if(!syncEnabled()) return;
+  setSyncState('busy');
+  try{
+    const res = await fetch(FIREBASE_DB_URL + SYNC_PATH);
+    const data = await res.json();
+    if(data && Array.isArray(data.ids)){
+      data.ids.forEach(id=>{
+        if(DATA.some(d=>d.id===id)){
+          selected.add(id);
+          updateMarker(id);
+        }
+      });
+      document.querySelectorAll('.card').forEach(card=>{
+        if(selected.has(Number(card.dataset.id))) card.classList.add('selected');
+      });
+      updateBar();
+      if(data.updatedAt){
+        const info = document.getElementById('syncInfo');
+        const d = new Date(data.updatedAt);
+        info.textContent = `Última atualização: ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
+        info.style.display = 'block';
+      }
+    }
+    setSyncState('ok');
+  }catch(err){
+    setSyncState('err');
+  }
+}
+
+/* ===================== mapa ===================== */
+const map = L.map('map', { scrollWheelZoom:false });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap',
+  maxZoom: 19
+}).addTo(map);
+
+function markerIcon(cat, isSel){
+  const c = CATS[cat];
+  return L.divIcon({
+    className: '',
+    html: `<div class="mk ${isSel?'on':''}" style="background:${c.hex}"></div>`,
+    iconSize: isSel ? [20,20] : [16,16]
+  });
+}
+
+const latlngs = [];
+DATA.forEach(item=>{
+  const m = L.marker([item.lat, item.lon], { icon: markerIcon(item.cat, false) }).addTo(map);
+  const popupHtml = `
+    <div class="pop-cat">${CATS[item.cat].label}</div>
+    <div class="pop-name">${item.name}</div>
+    <div class="pop-desc">${item.desc}</div>
+    <div class="pop-price">${item.price} / pessoa</div>
+    <div class="pop-actions">
+      <button class="pop-btn" data-id="${item.id}">Selecionar</button>
+      <a class="pop-route" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}" target="_blank" rel="noopener" aria-label="Rota no Google Maps" title="Rota no Google Maps">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      </a>
+    </div>`;
+  m.bindPopup(popupHtml);
+  m.on('popupopen', (ev)=>{
+    const btn = ev.popup.getElement().querySelector('.pop-btn');
+    const isSel = selected.has(item.id);
+    btn.classList.toggle('on', isSel);
+    btn.textContent = isSel ? 'Selecionado ✓' : 'Selecionar';
+    btn.onclick = ()=>{
+      toggleSelect(item.id);
+      const nowSel = selected.has(item.id);
+      btn.classList.toggle('on', nowSel);
+      btn.textContent = nowSel ? 'Selecionado ✓' : 'Selecionar';
+      const card = document.querySelector(`.card[data-id="${item.id}"]`);
+      if(card) card.classList.toggle('selected', nowSel);
+    };
+  });
+  markers[item.id] = m;
+  latlngs.push([item.lat, item.lon]);
+});
+map.fitBounds(latlngs, { padding:[26,26] });
+
+function updateMarker(id){
+  const item = DATA.find(d=>d.id===id);
+  markers[id].setIcon(markerIcon(item.cat, selected.has(id)));
+}
+
+/* ===================== sheet ===================== */
+const overlay = document.getElementById('overlay');
+document.getElementById('openSheetBtn').addEventListener('click', openSheet);
+document.getElementById('closeSheetBtn').addEventListener('click', closeSheet);
+overlay.addEventListener('click', e=>{ if(e.target===overlay) closeSheet(); });
+
+function openSheet(){
+  renderSheet();
+  overlay.classList.add('open');
+}
+function closeSheet(){ overlay.classList.remove('open'); }
+
+function renderSheet(){
+  const box = document.getElementById('sheetList');
+  const items = DATA.filter(d=>selected.has(d.id));
+  if(items.length===0){
+    box.innerHTML = `<div class="sheet-empty">Nenhum restaurante selecionado ainda.<br>Toque nos cartões ou nos pontos do mapa.</div>`;
+    return;
+  }
+  box.innerHTML = items.map(item=>`
+    <div class="sheet-item" data-id="${item.id}">
+      <span class="sheet-dot" style="background:${CATS[item.cat].color}"></span>
+      <span class="name">${item.name}</span>
+      <span class="sheet-price">${item.price}</span>
+      <button class="rm" data-id="${item.id}">remover</button>
+    </div>`).join('');
+}
+
+document.getElementById('sheetList').addEventListener('click', e=>{
+  const btn = e.target.closest('.rm');
+  if(!btn) return;
+  const id = Number(btn.dataset.id);
+  toggleSelect(id);
+  const card = document.querySelector(`.card[data-id="${id}"]`);
+  if(card) card.classList.remove('selected');
+  renderSheet();
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  [...selected].forEach(id=>{
+    selected.delete(id);
+    updateMarker(id);
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if(card) card.classList.remove('selected');
+  });
+  updateBar();
+  renderSheet();
+  scheduleSave();
+});
+
+function selectionText(){
+  const items = DATA.filter(d=>selected.has(d.id));
+  const byCat = {};
+  items.forEach(i=>{ (byCat[i.cat] = byCat[i.cat]||[]).push(i); });
+  let out = "Restaurantes em São Paulo que quero experimentar:\n";
+  Object.keys(CATS).forEach(key=>{
+    if(byCat[key]){
+      out += `\n${CATS[key].label}:\n` + byCat[key].map(i=>`- ${i.name} (${i.price}/pessoa)`).join('\n') + '\n';
+    }
+  });
+  return out.trim();
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+document.getElementById('copyBtn').addEventListener('click', async ()=>{
+  if(selected.size===0){ showToast('Nada selecionado ainda'); return; }
+  const text = selectionText();
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Lista copiada');
+  }catch(err){
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Lista copiada');
+  }
+});
+
+document.getElementById('waBtn').addEventListener('click', ()=>{
+  if(selected.size===0){ showToast('Nada selecionado ainda'); return; }
+  const text = encodeURIComponent(selectionText());
+  window.open(`https://wa.me/?text=${text}`, '_blank');
+});
+
+/* ===================== init ===================== */
+buildChips();
+renderCards();
+updateBar();
+loadSelection();
+</script>
+</body>
+</html>
