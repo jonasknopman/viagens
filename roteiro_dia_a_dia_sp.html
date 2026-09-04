@@ -20,6 +20,7 @@
     --select: #ffd166;
     --select-ink: #201a06;
     --c-rest: #e2645c;
+    --c-personal: #5c8ab5;
     --radius: 16px;
     --radius-sm: 10px;
   }
@@ -83,6 +84,7 @@
     color:var(--select); padding-top:2px;
   }
   .stop.rest .time{ color:var(--c-rest); }
+  .stop.personal .time{ color:var(--c-personal); }
   .stop .content{ flex:1; min-width:0; }
   .stop .name-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:3px; }
   .stop h3{ font-size:15.5px; font-weight:600; margin:0; }
@@ -130,6 +132,7 @@
     <div class="legend">
       <span><span class="dot" style="background:var(--select)"></span>Pontos turísticos</span>
       <span><span class="dot" style="background:var(--c-rest)"></span>Restaurantes</span>
+      <span><span class="dot" style="background:var(--c-personal)"></span>Compromissos pessoais</span>
     </div>
   </header>
 
@@ -181,12 +184,12 @@
       </div>
     </div>
 
-    <div class="stop rest">
+    <div class="stop personal">
       <div class="time">19:30</div>
       <div class="content">
-        <div class="name-row"><h3>Jantar — Restaurante Kazu</h3><span class="price">R$ 80–120</span></div>
-        <div class="addr">Liberdade</div>
-        <p class="blurb">Japonês tradicional, a ~1,4 km do Farol Santander — bom fechamento pro dia, na mesma região central.</p>
+        <div class="name-row"><h3>Jantar na casa da Flávia</h3></div>
+        <div class="addr">Endereço pessoal — já consta no mapa São Paulo v2</div>
+        <p class="blurb">Combinado direto com ela, sem reserva de restaurante.</p>
       </div>
     </div>
   </div>
