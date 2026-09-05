@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Foz do Iguaçu — roteiro com previsão do tempo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #17181b;
+    --bg-elev: #201f22;
+    --bg-elev-2: #29282c;
+    --ink: #f2efe9;
+    --ink-dim: #aeaba3;
+    --ink-faint: #7c7a76;
+    --line: rgba(242,239,233,.10);
+    --line-strong: rgba(242,239,233,.18);
+    --select: #ffd166;
+    --select-ink: #201a06;
+    --c-storm: #e2645c;
+    --c-light: #e0a83a;
+    --c-good: #6fbb8d;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,209,102,.05), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: 60px;
+  }
+  .wrap{ max-width:740px; margin:0 auto; padding:0 18px; }
+
+  h1,h2,h3{ font-family:'Space Grotesk','Inter',sans-serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  header{ padding:36px 0 20px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; letter-spacing:.16em;
+    color:var(--select); text-transform:uppercase;
+    display:flex; align-items:center; gap:10px; margin-bottom:14px;
+  }
+  .eyebrow::before{ content:""; width:22px; height:1px; background:var(--select); display:inline-block; }
+  h1{ font-size: clamp(26px, 5vw, 36px); line-height:1.15; font-weight:700; margin:0 0 10px; }
+  header p{ font-size:14px; line-height:1.55; color:var(--ink-dim); margin:0; }
+
+  .legend{
+    display:flex; gap:16px; margin:20px 0 6px; flex-wrap:wrap;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint);
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend .dot{ width:8px; height:8px; border-radius:50%; }
+
+  .day{ margin-top:34px; }
+  .day-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-bottom:6px; flex-wrap:wrap;
+  }
+  .day-head h2{ font-size:19px; font-weight:600; margin:0; }
+  .weather-pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600;
+    padding:4px 10px; border-radius:100px; white-space:nowrap;
+  }
+  .weather-pill.storm{ background:rgba(226,100,92,.12); color:var(--c-storm); border:1px solid rgba(226,100,92,.35); }
+  .weather-pill.light{ background:rgba(224,168,58,.12); color:var(--c-light); border:1px solid rgba(224,168,58,.35); }
+  .weather-pill.good{ background:rgba(111,187,141,.12); color:var(--c-good); border:1px solid rgba(111,187,141,.35); }
+  .day-note{
+    font-size:12.5px; color:var(--ink-faint); margin:0 0 14px; padding-bottom:12px;
+    border-bottom:1px solid var(--line-strong);
+  }
+
+  .stop{ display:flex; gap:16px; padding:13px 0; border-bottom:1px solid var(--line); }
+  .stop:last-child{ border-bottom:none; }
+  .stop .time{
+    flex:none; width:52px; font-family:'IBM Plex Mono', monospace; font-size:13px;
+    font-weight:600; color:var(--select); padding-top:2px;
+  }
+  .stop .content{ flex:1; min-width:0; }
+  .stop h3{ font-size:15.5px; font-weight:600; margin:0 0 3px; }
+  .stop .tag{
+    display:inline-block; font-family:'IBM Plex Mono', monospace; font-size:10px;
+    color:var(--ink-faint); border:1px solid var(--line-strong); border-radius:100px;
+    padding:1px 8px; margin-left:7px; vertical-align:middle; text-transform:uppercase;
+  }
+  .blurb{ font-size:13px; line-height:1.5; color:var(--ink-dim); margin:0; }
+
+  .notes{
+    margin-top:44px; background:var(--bg-elev); border:1px solid var(--line);
+    border-radius: var(--radius); padding:22px 22px 20px;
+  }
+  .notes h2{ font-size:17px; margin:0 0 14px; }
+  .notes h3{ font-size:13px; margin:20px 0 8px; color:var(--select); text-transform:uppercase; letter-spacing:.04em; font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  .notes h3:first-of-type{ margin-top:0; }
+  .notes ul{ margin:0; padding-left:18px; }
+  .notes li{ font-size:13.5px; line-height:1.6; color:var(--ink-dim); margin-bottom:9px; }
+  .notes li:last-child{ margin-bottom:0; }
+  .notes li b{ color:var(--ink); font-weight:600; }
+
+  .source{
+    margin-top:24px; font-size:12px; color:var(--ink-faint); line-height:1.6;
+  }
+  footer{
+    margin-top:36px; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    color:var(--ink-faint); text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Roteiro de Viagem</div>
+    <h1>Foz do Iguaçu, dia a dia</h1>
+    <p>Chegada terça-feira, 8/9, 13h45 — partida terça-feira, 15/9, 14h45 (Aeroporto de Foz). Reorganizado a partir do seu rascunho, para colocar as atividades mais expostas ao tempo nos dias de sol e as mais "indoor" nos dias de tempestade.</p>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--c-storm)"></span>Tempestade — evitar ao ar livre</span>
+      <span><span class="dot" style="background:var(--c-light)"></span>Chuva leve/dispersa</span>
+      <span><span class="dot" style="background:var(--c-good)"></span>Bom tempo</span>
+    </div>
+  </header>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Terça, 8/9 — Dia 0</h2>
+      <span class="weather-pill good">13% chuva · 24°/17°</span>
+    </div>
+    <p class="day-note">Chegada à tarde. Tempo tranquilo.</p>
+    <div class="stop">
+      <div class="time">14:00</div>
+      <div class="content"><h3>Chegada em Foz + check-in</h3><p class="blurb">Aeroporto de Foz do Iguaçu, 13h45.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">16:00</div>
+      <div class="content"><h3>Marco das Três Fronteiras</h3><p class="blurb">Ingresso vale das 13h30 às 21h. Fiquem até o pôr do sol e o show noturno, mas saiam um pouco antes de terminar — evita a fila de Uber na saída.</p></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Quarta, 9/9 — Dia 1</h2>
+      <span class="weather-pill storm">81% chuva · tempestade</span>
+    </div>
+    <p class="day-note">5h de precipitação prevista. Movido do seu Dia 3 original — compras são 100% indoor, dia perfeito pra isso.</p>
+    <div class="stop">
+      <div class="time">09:00</div>
+      <div class="content"><h3>Paraguai — Ciudad del Este</h3><p class="blurb">Compras em Shopping Paris, Shopping China Importados e Loja Monalisa. Cuidado com perfumes falsificados — confira a embalagem antes de comprar.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">20:00</div>
+      <div class="content"><h3>Jantar — Patio Pomare<span class="tag">indoor</span></h3><p class="blurb">Pizzaria. Alternativa mais especial: Restaurante Y do Belmond (R$ 365/pessoa, menu fixo com entrada, principal e sobremesa).</p></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Quinta, 10/9 — Dia 2</h2>
+      <span class="weather-pill light">63% chuva · dispersa</span>
+    </div>
+    <p class="day-note">2,5h de precipitação, sem tempestade — dia mantido como no seu rascunho original, com capa de chuva por precaução.</p>
+    <div class="stop">
+      <div class="time">09:00</div>
+      <div class="content"><h3>Itaipu Binacional — Panorâmico + Especial</h3><p class="blurb">Levem calça comprida e sapato fechado para o tour Especial (chega a ~10°C lá dentro, não fornecem roupa).</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">14:00</div>
+      <div class="content"><h3>Puerto Iguazú (Argentina) — Marco 3 Fronteiras + feirinha</h3><p class="blurb">Vão de Foz Trip ou táxi. Cuidado com abordagem/assédio na feirinha.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">20:00</div>
+      <div class="content"><h3>Jantar — La Rueda ou La Cabrera<span class="tag">indoor</span></h3><p class="blurb">Outras opções da sua lista: El Quincho del Tío Querido, Aqva Restaurant, Patanegra Gourmet, Yabuticaba Mercadito. Nem sempre aceitam reais — levem pesos ou cartão.</p></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Sexta, 11/9 — Dia 3</h2>
+      <span class="weather-pill storm">70% chuva · tempestade</span>
+    </div>
+    <p class="day-note">8h de precipitação — o pior dia da semana. Dia leve e 100% indoor de propósito, com folga pra descansar.</p>
+    <div class="stop">
+      <div class="time">10:00</div>
+      <div class="content"><h3>Mesquita Árabe<span class="tag">indoor</span></h3><p class="blurb">Pesquisem um pouco sobre a religião islâmica antes da visita.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">11:30</div>
+      <div class="content"><h3>AlBayan — doceria árabe<span class="tag">indoor</span></h3><p class="blurb">Bolo de pistache com açafrão, folhado de creme, baclava, folhado de castanha de caju, café árabe.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">14:30</div>
+      <div class="content"><h3>Aquafoz — aquário<span class="tag">indoor · opcional</span></h3><p class="blurb">O vídeo que vocês usaram de base achou o ingresso caro pelo que oferece (mais caro que as próprias Cataratas) e saiu decepcionado. Fica como opção — podem trocar por descanso no hotel.</p></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Sábado, 12/9 — Dia 4</h2>
+      <span class="weather-pill good">4% chuva · ventoso</span>
+    </div>
+    <p class="day-note">Bom tempo, mas vento de 22km/h — sem problema para as trilhas, só evitem passeios de barco aberto neste dia.</p>
+    <div class="stop">
+      <div class="time">08:30</div>
+      <div class="content"><h3>Cataratas Argentina — Sendero Verde</h3><p class="blurb">Comprem antecipado em iguazuargentina.com. Peguem o trem até a Estação Cataratas.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">10:30</div>
+      <div class="content"><h3>Circuito Superior</h3><p class="blurb">Documento com foto é obrigatório na entrada — não deixem no armário ou na bolsa. Há detector de metal.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">13:00</div>
+      <div class="content"><h3>Trem de volta + Circuito Inferior (se der tempo)</h3><p class="blurb">Desçam de novo na Estação Cataratas para o circuito inferior.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">20:00</div>
+      <div class="content"><h3>Jantar — Quinta da Oliva<span class="tag">indoor</span></h3><p class="blurb">Carbonara e Lampião são os pratos certeiros.</p></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Domingo, 13/9 — Dia 5</h2>
+      <span class="weather-pill good">1% chuva · frio</span>
+    </div>
+    <p class="day-note">Movido do seu Dia 1 original — bom tempo, mas mínima de 8°C, agasalho. Domingo o parque brasileiro abre 8h30.</p>
+    <div class="stop">
+      <div class="time">08:30</div>
+      <div class="content"><h3>Cataratas Brasil — trilha até a Garganta do Diabo</h3><p class="blurb">Trilha de 1,5km. Levem repelente e capa de chuva mesmo com sol — a cachoeira molha de qualquer jeito. Mirante perto da Garganta do Diabo. Parque fecha às 17h30.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">13:00</div>
+      <div class="content"><h3>Parque das Aves</h3><p class="blurb">Bem ao lado da entrada das Cataratas. Aberto até 16h30 (entrada até 16h).</p></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Segunda, 14/9 — Dia 6</h2>
+      <span class="weather-pill good">0% chuva · calmo</span>
+    </div>
+    <p class="day-note">Bom tempo e dia livre — sobrou como reserva, já que Dream Land, Wonder Park e o catamarã ficaram fora do roteiro.</p>
+    <div class="stop">
+      <div class="time">09:30</div>
+      <div class="content"><h3>Templo Budista Chen Tien</h3><p class="blurb">Aberto das 9h às 16h30. Pesquisem sobre a cultura budista antes de visitar.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">tarde</div>
+      <div class="content"><h3>Dia livre — sugestões</h3><p class="blurb"><b>Rafain Show:</b> jantar buffet + espetáculo folclórico latino-americano, por volta das 20h — a alternativa mais parecida com o catamarã, mas em terra firme. Reservar em rafainchurrachearia.com.br.<br><br><b>Macuco Safari:</b> passeio de barco dentro do Parque Nacional (diferente do catamarã — de dia, sem jantar), aproxima bastante das quedas. Precisa de ingresso separado do de domingo; vão se molhar.<br><br><b>Descanso:</b> piscina/spa do hotel, caminhada no centro, lembrancinhas locais, jantar tranquilo — já que virou dia de reserva mesmo.<br><br><b>Revisitar com calma:</b> Marco das Três Fronteiras de dia (só viram à noite no dia 0), Circuito Inferior das Cataratas Argentina se sobrou vontade, ou mais tempo na Mesquita/Templo Budista.</p></div>
+    </div>
+  </div>
+
+  <div class="day">
+    <div class="day-head">
+      <h2>Terça, 15/9 — Dia 7</h2>
+      <span class="weather-pill good">0% chuva · sol</span>
+    </div>
+    <p class="day-note">Dia de partida, voo às 14h45 — janela curta pela manhã.</p>
+    <div class="stop">
+      <div class="time">09:00</div>
+      <div class="content"><h3>Manhã livre</h3><p class="blurb">Café da manhã com calma, arrumar malas.</p></div>
+    </div>
+    <div class="stop">
+      <div class="time">12:30</div>
+      <div class="content"><h3>Transfer para o aeroporto</h3><p class="blurb">Saída do hotel por volta desse horário para o voo das 14h45.</p></div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h2>Dicas práticas</h2>
+
+    <h3>Documentos e pagamentos</h3>
+    <ul>
+      <li>Na Argentina, documento com foto é <b>obrigatório</b> na entrada do parque — não deixem no armário nem na bolsa.</li>
+      <li>Ingressos e lojas na Argentina/Paraguai nem sempre aceitam reais — levem pesos, guaranis ou cartão de crédito.</li>
+      <li>Comprem com antecedência pelo site oficial: Cataratas Brasil (cataratasdoiguacu.com.br), Cataratas Argentina (iguazuargentina.com) e Parque das Aves — reduz fila física.</li>
+    </ul>
+
+    <h3>O que levar</h3>
+    <ul>
+      <li>Repelente e capa de chuva para a trilha da Garganta do Diabo — a cachoeira molha mesmo com sol.</li>
+      <li>Calça comprida e sapato fechado para o tour Itaipu Especial (~10°C internos, sem fornecimento de roupa).</li>
+    </ul>
+
+    <h3>Cuidados</h3>
+    <ul>
+      <li>No Shopping China (Paraguai), cheque a embalagem dos perfumes — há falsificações que imitam bem os originais.</li>
+      <li>Não aceitem pedidos de estranhos para "carregar mercadoria" na volta da fronteira.</li>
+      <li>Fila grande para foto no Marco das Três Fronteiras — saiam um pouco antes do show terminar para evitar a fila de Uber na saída.</li>
+    </ul>
+
+    <h3>Sobre o tempo</h3>
+    <ul>
+      <li>A previsão foi conferida ao vivo no AccuWeather e bate com o arquivo que vocês tinham. Ainda assim, é boa prática reconferir 1-2 dias antes de cada passeio ao ar livre, já que previsão muda.</li>
+      <li>O <b>Aquafoz</b> (dia 3) ficou marcado como opcional — o vídeo-base achou caro pelo que entrega. Se a chuva realmente estiver forte, vale considerar como plano B mesmo assim, só pra ter algo indoor.</li>
+    </ul>
+
+    <h3>Ideia extra (opcional)</h3>
+    <ul>
+      <li>Um dos vídeos mostrou um <b>café da manhã ao amanhecer dentro do Parque das Cataratas</b> (R$ 240/pessoa, compra antecipada pelo site ou agência) — não é essencial, mas pode ser um upgrade bonito para o dia 13/9, já que amanhece com o parque vazio.</li>
+    </ul>
+  </div>
+
+  <p class="source">Previsão do tempo conferida ao vivo no AccuWeather (accuweather.com/pt/br/foz-do-iguacu) e cruzada com o arquivo de previsão fornecido. Dicas práticas extraídas dos dois vídeos enviados — a transcrição do vídeo-base do seu roteiro original, e uma checagem rápida do segundo vídeo (não assistido por você).</p>
+
+  <footer>Roteiro baseado no rascunho original + previsão do tempo de 5/9/2026</footer>
+</div>
+</body>
+</html>
